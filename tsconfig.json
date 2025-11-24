@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    /* Temel Ayarlar */
+    "target": "ES2020",             /* Modern Node.js sürümleri için çıktı hedefi */
+    "module": "commonjs",           /* Node.js'in anladığı modül sistemi */
+    "rootDir": "./src",             /* Bizim kodlarımızın bulunduğu ana klasör */
+    "outDir": "./dist",             /* Derlenmiş JavaScript dosyalarının gideceği yer */
+    
+    /* Sıkı Tip Kontrolü (Hata yapmamızı engeller) */
+    "strict": true,                 /* Tüm katı kuralları açar (Örn: 'any' kullanma uyarısı) */
+    "noImplicitAny": true,          /* Tipi belli olmayan değişkenlere izin verme */
+    
+    /* Modül Çözümleme */
+    "esModuleInterop": true,        /* CommonJS ve ES Modules uyumluluğunu sağlar */
+    "skipLibCheck": true,           /* Kütüphane dosyalarını kontrol etme (Derlemeyi hızlandırır) */
+    "forceConsistentCasingInFileNames": true /* Dosya isimlerinde büyük/küçük harf duyarlılığı */
+  },
+  "include": ["src/**/*"],          /* Sadece src içindekileri derle */
+  "exclude": ["node_modules"]       /* Kütüphane dosyalarını görmezden gel */
+}

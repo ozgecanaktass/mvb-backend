@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  api:
+    # Dockerfile'ı kullanarak imajı oluştur
+    build: .
+    container_name: glasses-backend
+    
+    # Yerel 3000 portunu konteynerdaki 3000 porta yönlendir
+    ports:
+      - "3000:3000"
+      
+    # Ortam değişkenlerini (.env) dosyadan oku
+    env_file:
+      - ./.env 
+      
+    # volumes: Hızlı geliştirme (hot-reload) için kritik kısım.
+    # 1. Yerel kodu konteynerdaki /app'e bağla ki dosya değiştiğinde konteyner görsün.
+    # 2. node_modules'ü dışlama ki host'taki node_modules ile konteynerdeki karışmasın.
+    volumes:
+      - .:/app 
+      - /app/node_modules 
+      
+    # Komut: ts-node-dev ile hızlı geliştirme modunda başlat
+    command: npm run dev
