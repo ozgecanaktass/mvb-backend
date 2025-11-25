@@ -1,34 +1,38 @@
-# --- 1. BUILD AŞAMASI (Derleme Ortamı) ---
-# Üretim imajının daha küçük olması için derlemeyi ayrı bir aşamada yaparız.
+# --- 1. BUILD STAGE ---
+# We build in a separate stage to keep the production image smaller.
 FROM node:18-alpine AS builder 
 WORKDIR /app
-# package.json ve lock dosyasını kopyala
+
+# Copy package.json and lock file
 COPY package*.json ./
-# Tüm bağımlılıkları yükle (devDependencies dahil)
+
+# Install all dependencies (including devDependencies)
 RUN npm install
-# Geri kalan kodları kopyala
+
+# Copy the rest of the code
 COPY . .
-# TypeScript kodunu JavaScript'e derle
+
+# Compile TypeScript code to JavaScript
 RUN npm run build 
 
-# --- 2. PRODUCTION AŞAMASI (Çalıştırma Ortamı) ---
-# Sadece gerekli olan dosyaları içeren temiz ve küçük bir imaj.
+# --- 2. PRODUCTION STAGE ---
+# Clean and small image containing only necessary files.
 FROM node:18-alpine 
 WORKDIR /app
 
-# Sadece üretim (production) bağımlılıklarını yükle (daha küçük imaj için)
+# Install only production dependencies (for a smaller image)
 COPY package*.json ./
 RUN npm install --only=production
 
-# Derlenmiş JS dosyalarını ve .env dosyasını kopyala
+# Copy compiled JS files and .env file
 COPY --from=builder /app/dist ./dist 
 COPY .env ./
 
 EXPOSE 3000
 
-# Uygulama portunu tanımla (Dockerfile'da EN İYİ yöntem budur)
+# Define application port (Best practice in Dockerfile)
 ENV PORT 3000 
 ENV NODE_ENV production
 
-# Uygulamayı başlat
+# Start the application
 CMD ["npm", "start"]

@@ -1,33 +1,31 @@
-// .env dosyasını en tepeye import ediyoruz ki tüm dosyalardan erişilebilsin.
+//import .env 
 import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './app';
+import { start } from 'repl';
 
-// Portu .env'den al, yoksa 3000 kullan
+// get the port from .env or use default
 const PORT = process.env.PORT || 3000;
 
-// --- Sunucuyu Başlat ---
+// start the server
 const server = app.listen(PORT, () => {
-  console.log(`
+console.log(`
   ################################################
-  🚀  Sunucu Başarıyla Ayağa Kalktı!
-  📡  Adres: http://localhost:${PORT}
-  🛠️   Ortam: ${process.env.NODE_ENV}
+    Server Started Successfully!
+    Address: http://localhost:${PORT}
+    Environment: ${process.env.NODE_ENV}
   ################################################
   `);
 });
 
-// --- Hata Yakalama (Graceful Shutdown) ---
-// Beklenmeyen bir Promise hatası (örn: DB bağlantısı koptu) olursa logla.
-// Bu mekanizmalar, uzun süreli projeler için kritik öneme sahiptir.
-process.on('unhandledRejection', (reason: Error) => {
-  console.error('❌ Yakalanmayan Promise Reddi:', reason.message);
-  // İleride burada sunucuyu kontrollü kapatma kodu olabilir.
+// error handling for server
+process.on('unhandledRejection', (reason : Error) => {
+  console.error('Unhandled Rejection at:', reason.message);
 });
 
-// Beklenmeyen bir kod hatası (örn: olmayan değişken kullanımı) olursa.
-process.on('uncaughtException', (error: Error) => {
-  console.error('❌ Yakalanmayan İstisna:', error.message);
-  process.exit(1); // Güvenlik için süreci öldür (Docker/PM2 yeniden başlatacaktır).
+// for unexpected code error exceptions
+process.on('uncaughtException', (error : Error) => {
+  console.error('Uncaught Exception thrown:', error.message);
+  process.exit(1);
 });
