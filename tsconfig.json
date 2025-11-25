@@ -1,15 +1,26 @@
 {
   "compilerOptions": {
+    /* Temel Ayarlar */
     "target": "ES2020",
     "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
+    
+    /* Sıkı Tip Kontrolü */
     "strict": true,
     "noImplicitAny": true,
-    "esModuleInterop": true,
+    
+    /* MODÜL ÇÖZÜMLEME KRİTİK AYARI */
+    "esModuleInterop": true, 
+    "moduleResolution": "node", // Bu, TS'e modül bulma yöntemini belirtir
+    
+    // YENİ VE KRİTİK ÇÖZÜM SATIRI: ES Modules'u simüle eder.
+    "allowSyntheticDefaultImports": true, 
+    
+    /* Diğer Ayarlar */
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"],        
-  "exclude": ["node_modules"]   
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

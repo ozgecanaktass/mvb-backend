@@ -5,6 +5,8 @@ import { version } from 'os';
 import { time } from 'console';
 import path from 'path';
 
+import dealerRoutes from './modules/dealers/dealers.routes';
+
 // app initialization
 const app: Application = express(); 
 
@@ -23,7 +25,8 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// route directions are gonna be here in future
+// route directions 
+app.use('/api/v1/dealers', dealerRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
