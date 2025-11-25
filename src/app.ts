@@ -6,6 +6,7 @@ import { time } from 'console';
 import path from 'path';
 
 import dealerRoutes from './modules/dealers/dealers.routes';
+import authRoutes from './modules/auth/auth.routes';
 
 // app initialization
 const app: Application = express(); 
@@ -27,6 +28,7 @@ app.get('/', (req: Request, res: Response) => {
 
 // route directions 
 app.use('/api/v1/dealers', dealerRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
