@@ -7,6 +7,7 @@ import path from 'path';
 
 import dealerRoutes from './modules/dealers/dealers.routes';
 import authRoutes from './modules/auth/auth.routes';
+import analyticsRoutes from './modules/analytics/analytics.routes';
 
 // app initialization
 const app: Application = express(); 
@@ -27,6 +28,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // route directions 
+app.use ('/l', analyticsRoutes);
 app.use('/api/v1/dealers', dealerRoutes);
 app.use('/api/v1/auth', authRoutes);
 
