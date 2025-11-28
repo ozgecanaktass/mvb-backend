@@ -5,6 +5,9 @@ import { version } from 'os';
 import { time } from 'console';
 import path from 'path';
 
+import swaggerUi from 'swagger-ui-express';
+import * as swaggerDocument from './docs/swagger.json';
+
 import dealerRoutes from './modules/dealers/dealers.routes';
 import authRoutes from './modules/auth/auth.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
@@ -18,15 +21,18 @@ app.use(helmet()); // automatically secures HTTP headers
 app.use(cors()); // browser security
 app.use(express.json()); // parse JSON request bodies
 
+// Swagger UI setup
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // basic health check route
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     message: 'MVP is running!',
     version: '1.0.0',
     env: process.env.NODE_ENV,
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
+    documentation: '/docs'
   });
-});
+}); 
 
 // route directions 
 app.use ('/l', analyticsRoutes);

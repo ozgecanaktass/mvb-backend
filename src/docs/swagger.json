@@ -1,0 +1,170 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "dealer -management-backend API",
+    "version": "1.0.0",
+    "description": "dealer management, order processing, and analytics API documentation."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "API Server"
+    },
+    {
+      "url": "http://localhost:3000/l",
+      "description": "Short Link Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Dealer": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "quotaLimit": { "type": "number" },
+          "currentLinkHash": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log in to the system and obtain a Token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "default": "admin@uretici.com" },
+                  "password": { "type": "string", "default": "admin-sifresi" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Successful login, token returned." },
+          "401": { "description": "Invalid login." }
+        }
+      }
+    },
+    "/dealers": {
+      "get": {
+        "tags": ["Dealers"],
+        "summary": "List all dealers",
+        "responses": {
+          "200": { "description": "List of dealers." }
+        }
+      },
+      "post": {
+        "tags": ["Dealers"],
+        "summary": "Create a new dealer",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "quotaLimit": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Dealer created." }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "List all orders",
+        "responses": {
+          "200": { "description": "List of orders." }
+        }
+      },
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Create a new order",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "dealerId": { "type": "integer" },
+                  "customerName": { "type": "string" },
+                  "configuration": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Order created." }
+        }
+      }
+    },
+    "/orders/{id}/status": {
+      "patch": {
+        "tags": ["Orders"],
+        "summary": "Update order status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "example": "In Production" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Status updated." }
+        }
+      }
+    },
+    "/stats/{dealerId}": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Dealer click statistics",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dealerId",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Statistics data." }
+        }
+      }
+    }
+  }
+}

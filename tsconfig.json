@@ -17,6 +17,7 @@
     // YENİ VE KRİTİK ÇÖZÜM SATIRI: ES Modules'u simüle eder.
     "allowSyntheticDefaultImports": true, 
     
+    "resolveJsonModule": true,
     /* Diğer Ayarlar */
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
