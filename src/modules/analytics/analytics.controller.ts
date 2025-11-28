@@ -4,6 +4,7 @@ import { VisitLog } from '../../shared/models/VisitLog';
 import { dealerDatabase, mockStore } from '../../shared/database/mockStore';
 import { AppError } from '../../shared/utils/AppError';
 
+// for test i use a constant URL
 const CONFIGURATION_URL = 'https://www.google.com/search?q=eyewear+configurator';
 
 export const trackAndRedirect = (req: Request, res: Response) => {
@@ -47,7 +48,7 @@ export const trackAndRedirect = (req: Request, res: Response) => {
     res.redirect(`${CONFIGURATION_URL}?dealerId=${dealer.id}`);
 };
 
-//GEt / api/v1/analytics/stats/:dealerId
+// GET / api/v1/analytics/stats/:dealerId
 // for get the dealer stats
 export const getDealerStats = (req: Request, res: Response) => {
     const dealerId = Number(req.params.dealerId);

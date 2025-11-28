@@ -1,5 +1,6 @@
 import { Dealer } from "../models/Dealer";
 import { User } from "../models/User"; 
+import { Order } from "../models/Order";
 
 const initialUsers: User[] = [
     {
@@ -35,13 +36,30 @@ export const dealerDatabase: Dealer[] = [
     }
 ];
 
+// sample order data for testing
+const initialOrders: Order[] = [
+    {
+        id: 5001,
+        dealerId: 101,
+        customerName: "Ata Arpat",
+        status: "Pending",
+        configuration: { 
+            frame: "Aviator",
+            lensType: "BlueCut",
+            prescription: {left: -1.5, right: -1.0}
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+     }
+];
+
 export const mockStore = {
     users: initialUsers,
     dealers: dealerDatabase,
     
     // sonra
     visitLogs: [] as any[], 
-    orders: [] as any[], 
+    orders: initialOrders ,
 
     revokedTokens: [] as string[],
 };
