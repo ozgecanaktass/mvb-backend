@@ -17,16 +17,19 @@ export const analyticsRepository = {
     },
 
     // save visit log to cosmos db
-    async createVisitLog(visitLog: VisitLog): Promise<void> {
+async createVisitLog(visitLog: VisitLog): Promise<void> {
         try {
             const container = await this.getContainer();
-            await container.items.create(visitLog); // insert the visit log
-            console.log("Visit log saved successfully.");
+            const logToSave = { 
+                ...visitLog, 
+                dealerId: Number(visitLog.dealerId) 
+            };
+            
+            await container.items.create(logToSave);
+            console.log(`[Cosmos DB]: Visit log saved for hash ${visitLog.linkHash} (Dealer: ${logToSave.dealerId})`);
         } catch (error) {
             console.error("Error saving visit log:", error);
-            // we do not throw the error, as analytics failure should not block main app flow 
         }
-    
     },
 
     async getVisitsByDealerId(dealerId: number): Promise<VisitLog[]> {
