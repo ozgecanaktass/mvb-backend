@@ -4,7 +4,7 @@ import { AppError } from '../../shared/utils/AppError';
 import { mockStore } from '../../shared/database/mockStore';
 import { User } from '../../shared/models/User';
 import { AuthInputDTO } from './auth.controller';
-
+// import { authRepository } from './auth.repository';
 
 // user creates JWT token after login
 export const signToken = (userId: number, role : string): string => {
@@ -28,6 +28,16 @@ export const signToken = (userId: number, role : string): string => {
 
 // verify user credentials during login and return token if valid
 export const authenticateUser = async ({email, password}: AuthInputDTO): Promise<{ user: User; token: string }> => {
+    
+    // --- AZURE SQL 
+    /*
+    const user = await authRepository.findByEmail(email);
+    if (!user) {
+        throw new AppError("Invalid email or password.", 401);
+    }
+    // const isPasswordValid = await compare(password, user.passwordHash);
+    */
+
     // find the user from mock database
     const user = mockStore.users.find (u => u.email === email && u.isActive);
      if (!user) {

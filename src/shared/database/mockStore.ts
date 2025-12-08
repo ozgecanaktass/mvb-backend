@@ -9,6 +9,7 @@ const initialUsers: User[] = [
         passwordHash: "sahte-hash-sifre", 
         name: "Yönetici Kullanıcı",
         role: "superuser",
+        dealerLimit: 10,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -20,7 +21,6 @@ export const dealerDatabase: Dealer[] = [
         id: 101,
         name: "Merkez Optik",
         currentLinkHash: "a1b2c3d4-test-hash",
-        quotaLimit: 100,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -29,7 +29,6 @@ export const dealerDatabase: Dealer[] = [
         id: 102,
         name: "Batı Optik",
         currentLinkHash: "x9y8z7w6-test-hash",
-        quotaLimit: 50,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -57,7 +56,6 @@ export const mockStore = {
     users: initialUsers,
     dealers: dealerDatabase,
     
-    // sonra
     visitLogs: [] as any[], 
     orders: initialOrders ,
 

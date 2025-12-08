@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "dealer -management-backend API",
+    "title": "Eyewear Dealer Management API (MVB)",
     "version": "1.0.0",
-    "description": "dealer management, order processing, and analytics API documentation."
+    "description": "Backend API documentation for dealer management, order tracking, and link analytics."
   },
   "servers": [
     {
@@ -29,8 +29,21 @@
         "properties": {
           "id": { "type": "integer" },
           "name": { "type": "string" },
-          "quotaLimit": { "type": "number" },
-          "currentLinkHash": { "type": "string" }
+          "currentLinkHash": { "type": "string" },
+          "isActive": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "dealerId": { "type": "integer" },
+          "customerName": { "type": "string" },
+          "status": { "type": "string", "enum": ["Pending", "In Production", "Shipped"] },
+          "configuration": { "type": "object" },
+          "createdAt": { "type": "string", "format": "date-time" }
         }
       }
     }
@@ -55,8 +68,17 @@
           }
         },
         "responses": {
-          "200": { "description": "Successful login, token returned." },
-          "401": { "description": "Invalid login." }
+          "200": { "description": "Login successful, token returned." },
+          "401": { "description": "Invalid email or password." }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log out (Invalidate Token)",
+        "responses": {
+          "200": { "description": "Logout successful." }
         }
       }
     },
@@ -77,16 +99,17 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["name"],
                 "properties": {
-                  "name": { "type": "string" },
-                  "quotaLimit": { "type": "number" }
+                  "name": { "type": "string" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Dealer created." }
+          "201": { "description": "Dealer created successfully." },
+          "401": { "description": "Unauthorized access." }
         }
       }
     },
@@ -100,12 +123,13 @@
       },
       "post": {
         "tags": ["Orders"],
-        "summary": "Create a new order",
+        "summary": "Create a new order (from Configurator)",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["dealerId", "configuration"],
                 "properties": {
                   "dealerId": { "type": "integer" },
                   "customerName": { "type": "string" },
@@ -116,7 +140,7 @@
           }
         },
         "responses": {
-          "201": { "description": "Order created." }
+          "201": { "description": "Order created successfully." }
         }
       }
     },
@@ -124,6 +148,7 @@
       "patch": {
         "tags": ["Orders"],
         "summary": "Update order status",
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
             "in": "path",
@@ -137,6 +162,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["status"],
                 "properties": {
                   "status": { "type": "string", "example": "In Production" }
                 }
@@ -145,14 +171,14 @@
           }
         },
         "responses": {
-          "200": { "description": "Status updated." }
+          "200": { "description": "Status updated successfully." }
         }
       }
     },
     "/stats/{dealerId}": {
       "get": {
         "tags": ["Analytics"],
-        "summary": "Dealer click statistics",
+        "summary": "Get dealer click statistics",
         "parameters": [
           {
             "in": "path",
@@ -162,7 +188,25 @@
           }
         ],
         "responses": {
-          "200": { "description": "Statistics data." }
+          "200": { "description": "Statistics data retrieved." }
+        }
+      }
+    },
+    "/{linkHash}": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "(B2C) Link Tracking and Redirection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "linkHash",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "302": { "description": "Redirect to configurator page." },
+          "404": { "description": "Link not found." }
         }
       }
     }

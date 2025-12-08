@@ -15,7 +15,7 @@ export const dealersRepository = {
             const result = await pool.request().query(`
                 SELECT 
                     id, name, link_hash as currentLinkHash, 
-                    quota_limit as quotaLimit, is_active as isActive, 
+                    is_active as isActive, 
                     created_at as createdAt, updated_at as updatedAt 
                 FROM dealers 
                 ORDER BY created_at DESC
@@ -37,7 +37,7 @@ export const dealersRepository = {
                 .query(`
                     SELECT 
                         id, name, link_hash as currentLinkHash, 
-                        quota_limit as quotaLimit, is_active as isActive 
+                        is_active as isActive 
                     FROM dealers 
                     WHERE link_hash = @linkHash
                 `);
@@ -55,12 +55,11 @@ export const dealersRepository = {
         const result = await pool.request()
             .input('name', sql.NVarChar, dealerData.name)
             .input('linkHash', sql.NVarChar, dealerData.currentLinkHash)
-            .input('quotaLimit', sql.Int, dealerData.quotaLimit)
             .input('isActive', sql.Bit, dealerData.isActive ? 1 : 0)
             .query(`
-                INSERT INTO dealers (name, link_hash, quota_limit, is_active, created_at, updated_at)
+                INSERT INTO dealers (name, link_hash, is_active, created_at, updated_at)
                 OUTPUT INSERTED.id
-                VALUES (@name, @linkHash, @quotaLimit, @isActive, GETDATE(), GETDATE())
+                VALUES (@name, @linkHash, @isActive, GETDATE(), GETDATE())
             `);
 
         const newId = result.recordset[0].id;

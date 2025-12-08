@@ -36,13 +36,19 @@ export const trackAndRedirect = async (req: Request, res: Response) => {
         timestamp: new Date()
     };
 
-    // Save log via Cosmos DB Repository
     if (!isDuplicate) {
-        await analyticsRepository.createVisitLog(newLog);
+        // --- HYBRID RECORDING LOGIC ---
+        try {
+            //first try to write to the real DB (Cosmos)
+            await analyticsRepository.createVisitLog(newLog);
+        } catch (error) {
+            console.warn("Cosmos DB write error, using Mock Store.");
+        }
+
+        // in any case, also write to Mock Store (to ensure demo and statistics)
+        mockStore.visitLogs.push(newLog);
         
-        // also save to mock store for spam control
-        const dealerTotalVisits = mockStore.visitLogs.filter(l => l.dealerId === dealer.id).length;
-        console.log(`Visit logged. Dealer: ${dealer.name}`);
+        console.log(`Visit logged. Dealer: ${dealer.name} (Total in Mock: ${mockStore.visitLogs.filter(l => l.dealerId === dealer.id).length})`);
     } else {
         console.log(`Spam click detected. Dealer: ${dealer.name}`);
     }
@@ -60,7 +66,13 @@ export const trackAndRedirect = async (req: Request, res: Response) => {
 export const getDealerStats = async (req: Request, res: Response) => {
     const dealerId = Number(req.params.dealerId);
     
-    const stats = await analyticsRepository.getVisitsByDealerId(dealerId);
+    //hybrid fetching logic
+    let stats = await analyticsRepository.getVisitsByDealerId(dealerId);
+
+    if (stats.length === 0) {
+        console.log("cosmos db returned no data, falling back to mock store");
+        stats = mockStore.visitLogs.filter(log => log.dealerId === dealerId);
+    }
 
     res.status(200).json({
         success: true,

@@ -8,7 +8,6 @@ export interface Dealer {
     // !!!
     currentLinkHash: string; // current active link hash
 
-    quotaLimit: number; // maximum allowed quota
 
     isActive: boolean;
     createdAt: Date;
@@ -18,5 +17,4 @@ export interface Dealer {
 // defines the data required to create a new dealer
 export interface DealerCreateDTO {
     name: string;
-    quotaLimit: number;
 }
