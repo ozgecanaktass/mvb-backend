@@ -1,28 +1,35 @@
 import sql from 'mssql';
 import { sqlConfig } from '../../config/dbConfig';
 
-// singleton pattern for SQL connection pool
-let pool: sql.ConnectionPool | null = null;
-
-export const connectToSql = async () => {
-    try{
-        if(!sqlConfig.connectionString){
-            console.warn("SQL connection string is not defined.");
-            return null;
-    }
-    console.log("Connecting to Azure SQL Database...");
-    pool = await sql.connect(sqlConfig.connectionString);
-    console.log("Connected to Azure SQL Database.");
-    return pool;
+// function to get a new SQL connection pool
+export const getNewConnection = async (): Promise<sql.ConnectionPool> => {
+    try {
+        console.log(`🔄 [SQL]: Connecting to -> ${sqlConfig.server} (User: ${sqlConfig.user})`);
+        // build the config object for the connection
+        const config: sql.config = {
+            user: sqlConfig.user!,
+            password: sqlConfig.password!,
+            server: sqlConfig.server!, 
+            database: sqlConfig.database!,
+            port: 1433, // Standard SQL Server port
+            options: {
+                encrypt: false, 
+                trustServerCertificate: true, 
+                enableArithAbort: true
+            },
+            pool: {
+                max: 10,
+                min: 0,
+                idleTimeoutMillis: 30000
+            }
+        };
+        const pool = await new sql.ConnectionPool(config).connect();
+        
+        console.log("✅ [SQL]: Connection established successfully.");
+        return pool;
     } catch (error) {
-        console.error("Error connecting to Azure SQL Database:", error);
-        return null;
+        console.error('❌ [SQL Error] Connection failed:', error);
+        throw error; 
     }
 };
 
-export const getSqlPool = (): sql.ConnectionPool => {
-    if (!pool) {
-        throw new Error("SQL Connection Pool is not initialized. Call connectToSql first.");
-    }
-    return pool;
-};

@@ -5,33 +5,49 @@ import { cosmosConfig } from '../../config/dbConfig';
 
 export const analyticsRepository = {
     container: null as Container | null,
-
-    // cosmos container initialization
+ //  gets the Cosmos DB container, creates if not exists
     async getContainer(): Promise<Container> {
         if (!this.container) {
             const client = getCosmosClient();
-            const database = client.database(cosmosConfig.databaseId);
-            this.container = database.container(cosmosConfig.containerId);
+            
+            // check / create database
+            const { database } = await client.databases.createIfNotExists({ 
+                id: cosmosConfig.databaseId 
+            });
+            console.log(`[Cosmos DB]: Database '${database.id}' verified.`);
+
+            // check / create container
+            // partition key definition is critical (/linkHash)
+            const { container } = await database.containers.createIfNotExists({ 
+                id: cosmosConfig.containerId,
+                partitionKey: { paths: ['/linkHash'] } 
+            });
+            console.log(`[Cosmos DB]: Container '${container.id}' verified.`);
+
+            this.container = container;
         }
         return this.container;
     },
 
-    // save visit log to cosmos db
-async createVisitLog(visitLog: VisitLog): Promise<void> {
+    // creates a new visit log entry
+    async createVisitLog(visitLog: VisitLog): Promise<void> {
         try {
             const container = await this.getContainer();
+            
             const logToSave = { 
                 ...visitLog, 
                 dealerId: Number(visitLog.dealerId) 
             };
             
             await container.items.create(logToSave);
-            console.log(`[Cosmos DB]: Visit log saved for hash ${visitLog.linkHash} (Dealer: ${logToSave.dealerId})`);
+            
+            console.log(`[Cosmos DB]: Visit log successfully saved. Hash: ${visitLog.linkHash}, Dealer: ${logToSave.dealerId}`);
         } catch (error) {
-            console.error("Error saving visit log:", error);
+            console.error("[Cosmos DB Error] Failed to save visit log:", error);
         }
     },
 
+    // fetches visit logs by dealer ID
     async getVisitsByDealerId(dealerId: number): Promise<VisitLog[]> {
         try {
             const container = await this.getContainer();
@@ -41,16 +57,17 @@ async createVisitLog(visitLog: VisitLog): Promise<void> {
                 parameters: [
                     {
                         name: "@dealerId",
-                        value: dealerId
+                        value: Number(dealerId)
                     }
                 ]
             };
 
             const { resources: items } = await container.items.query<VisitLog>(querySpec).fetchAll();
+            
             return items;
         } catch (error) {
-            console.error("Error fetching visits:", error);
-            return []; // return empty array on error
+            console.error("[Cosmos DB Error] Failed to fetch visit logs:", error);
+            return []; 
         }
     }
-}
+};

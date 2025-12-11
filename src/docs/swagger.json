@@ -191,24 +191,6 @@
           "200": { "description": "Statistics data retrieved." }
         }
       }
-    },
-    "/{linkHash}": {
-      "get": {
-        "tags": ["Analytics"],
-        "summary": "(B2C) Link Tracking and Redirection",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "linkHash",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "302": { "description": "Redirect to configurator page." },
-          "404": { "description": "Link not found." }
-        }
-      }
     }
   }
 }

@@ -15,7 +15,7 @@ export const login = async (req: Request, res: Response) => {
         throw new AppError("Email and password are required.", 400);
     }
 
-    // Authenticate user
+    //authenticate user
     const { user, token } =  await authenticateUser({ email, password });
 
     res.status(200).json({

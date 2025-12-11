@@ -16,6 +16,11 @@ import ordersRoutes from './modules/orders/orders.routes';
 // app initialization
 const app: Application = express(); 
 
+app.use((req, res, next) => {
+    console.log(`🔔 [REQUEST] : ${req.method} ${req.url}`);
+    next();
+});
+
 // middlewares
 app.use(helmet()); // automatically secures HTTP headers
 app.use(cors()); // browser security

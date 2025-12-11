@@ -1,38 +1,39 @@
-# --- 1. BUILD STAGE ---
-# We build in a separate stage to keep the production image smaller.
-FROM node:18-alpine AS builder 
+# --- 1. BUILD AŞAMASI (Derleme Ortamı) ---
+FROM node:18-alpine AS builder
+
 WORKDIR /app
 
-# Copy package.json and lock file
+# Paket dosyalarını kopyala
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies)
+# TÜM bağımlılıkları yükle (devDependencies dahil - ts-node-dev burada)
 RUN npm install
 
-# Copy the rest of the code
+# Kaynak kodları kopyala
 COPY . .
 
-# Compile TypeScript code to JavaScript
-RUN npm run build 
+# TypeScript'i derle (dist klasörüne)
+RUN npm run build
 
-# --- 2. PRODUCTION STAGE ---
-# Clean and small image containing only necessary files.
-FROM node:18-alpine 
+
+# --- 2. DEVELOPMENT & PRODUCTION AŞAMASI ---
+FROM node:18-alpine
+
 WORKDIR /app
 
-# Install only production dependencies (for a smaller image)
+# package.json'ı kopyala
 COPY package*.json ./
-RUN npm install --only=production
 
-# Copy compiled JS files and .env file
-COPY --from=builder /app/dist ./dist 
-COPY .env ./
+# TÜM bağımlılıkları tekrar yükle (ts-node-dev'in çalıştığından emin olmak için)
+# Yerel geliştirmede 'npm run dev' komutu ts-node-dev'i arayacak.
+RUN npm install
 
+# Derlenmiş dosyaları ve kaynak kodları kopyala (Hot reload için kaynak kodlar önemli)
+COPY --from=builder /app/dist ./dist
+COPY . .
+
+# Portu dışarı aç
 EXPOSE 3000
 
-# Define application port (Best practice in Dockerfile)
-ENV PORT 3000 
-ENV NODE_ENV production
-
-# Start the application
-CMD ["npm", "start"]
+# Varsayılan komut (Docker Compose bunu ezecek ama yine de bulunsun)
+CMD ["npm", "run", "dev"]

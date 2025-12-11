@@ -1,15 +1,14 @@
 import { Request, Response } from "express";
-import { mockStore } from "../../shared/database/mockStore";
+//import { mockStore } from "../../shared/database/mockStore";
 import { Order, CreateOrderDTO } from "../../shared/models/Order";
 import { AppError } from "../../shared/utils/AppError";
 import { count } from "console";
-// import { orderRepository } from './orders.repository';
+import { orderRepository } from './orders.repository';
 
 // GET / api/v1/orders/:orderId
 // in future i will use this to get a specific order by id 
-export const getOrders = (req: Request, res: Response) => {
-    // AZURE SQL 
-    /*
+export const getOrders = async (req: Request, res: Response) => {
+
     try {
         const orders = await orderRepository.findAll();
         return res.status(200).json({
@@ -20,25 +19,16 @@ export const getOrders = (req: Request, res: Response) => {
     } catch (error) {
         throw new AppError("Orders could not be retrieved.", 500);
     }
-    */
-
-    res.status(200).json({
-        success : true,
-        count: mockStore.orders.length,
-        data: mockStore.orders
-    });
-}
+};
 
 // POST / api/v1/orders
-export const createOrder = (req: Request, res: Response) => {
+export const createOrder = async (req: Request, res: Response) => {
     const {dealerId, customerName, configuration} = req.body as CreateOrderDTO;
 
     if (!dealerId || !customerName || !configuration) {
         throw new AppError("Missing required fields.", 400);
     }
 
-    // AZURE SQL
-    /*
     try {
         const newOrder = await orderRepository.create({ dealerId, customerName, configuration });
         return res.status(201).json({
@@ -47,37 +37,16 @@ export const createOrder = (req: Request, res: Response) => {
             data: newOrder
         });
     } catch (error) {
+         console.error(error); 
         throw new AppError("Order could not be created.", 500);
     }
-    */
-
-    // create new order object
-    const newOrder: Order = {
-        id: 5000 + mockStore.orders.length + 1 ,
-        dealerId,
-        customerName: customerName || "Guest Customer",
-        configuration,
-        status: "Pending",
-        createdAt: new Date(),
-        updatedAt: new Date()
-    };
-
-    // save to mockStore
-    mockStore.orders.push(newOrder);
-
-    res.status(201).json({
-        success: true,
-        message: "Order created successfully.",
-        data: newOrder
-    });
 };
 
 // PUT / api/v1/orders/:id/status
-export const updateOrderStatus = (req: Request, res: Response) => {
+export const updateOrderStatus = async(req: Request, res: Response) => {
     const orderId = Number(req.params.id);
     const { status } = req.body;
-    // AZURE SQL 
-    /*
+
     try {
         const order = await orderRepository.findById(orderId);
         if (!order) {
@@ -94,22 +63,4 @@ export const updateOrderStatus = (req: Request, res: Response) => {
         if (error instanceof AppError) throw error;
         throw new AppError("Status could not be updated.", 500);
     }
-    */
-
-    // Find the order
-    const order = mockStore.orders.find(o => o.id === orderId);
-
-    if (!order) {
-        throw new AppError("Order not found.", 404);
-    }
-
-    // Update status
-    order.status = status;
-    order.updatedAt = new Date();
-
-    res.status(200).json({
-        success: true,
-        message: `Order status updated successfully as ${status}.`,
-        data : order
-    });
 };

@@ -3,21 +3,31 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './app';
-import { start } from 'repl';
 
 // get the port from .env or use default
 const PORT = process.env.PORT || 3000;
 
-// start the server
-const server = app.listen(PORT, () => {
-console.log(`
-  ################################################
-    Server Started Successfully!
-    Address: http://localhost:${PORT}
-    Environment: ${process.env.NODE_ENV}
-  ################################################
-  `);
-});
+const startServer = async () => {
+  try {
+    console.log('🚀 Server is starting...');
+
+    app.listen(PORT, () => {
+      console.log(`
+        ################################################
+          Server Started Successfully!
+          Address: http://localhost:${PORT}
+          Environment: ${process.env.NODE_ENV}
+        ################################################
+      `);
+    });
+
+  } catch (error) {
+    console.error('❌ FAILED TO START SERVER:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 // error handling for server
 process.on('unhandledRejection', (reason : Error) => {
@@ -29,3 +39,4 @@ process.on('uncaughtException', (error : Error) => {
   console.error('Uncaught Exception thrown:', error.message);
   process.exit(1);
 });
+
