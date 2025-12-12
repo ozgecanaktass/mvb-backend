@@ -179,12 +179,28 @@
       "get": {
         "tags": ["Analytics"],
         "summary": "Get dealer click statistics",
+        "description": "Returns visit logs for a dealer. Optional date filters available.",
         "parameters": [
           {
             "in": "path",
             "name": "dealerId",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": { "type": "integer" },
+            "description": "Dealer ID to filter stats for"
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "required": false,
+            "schema": { "type": "string", "format": "date" },
+            "description": "Filter logs starting from this date (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "required": false,
+            "schema": { "type": "string", "format": "date" },
+            "description": "Filter logs up to this date (YYYY-MM-DD)"
           }
         ],
         "responses": {
