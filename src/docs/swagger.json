@@ -2,8 +2,8 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Eyewear Dealer Management API (MVB)",
-    "version": "1.0.0",
-    "description": "Backend API documentation for dealer management, order tracking, and link analytics."
+    "version": "1.1.0",
+    "description": "Backend API documentation for dealer management, order tracking, and multi-tenant user management."
   },
   "servers": [
     {
@@ -33,6 +33,19 @@
           "isActive": { "type": "boolean" },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { 
+            "type": "string", 
+            "enum": ["producer_admin", "dealer_admin", "dealer_user"] 
+          },
+          "dealerId": { "type": "integer", "nullable": true }
         }
       },
       "Order": {
@@ -79,6 +92,44 @@
         "summary": "Log out (Invalidate Token)",
         "responses": {
           "200": { "description": "Logout successful." }
+        }
+      }
+    },
+    "/auth/users": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Create a new user (Multi-Tenant)",
+        "description": "Producer can add a new Dealer Admin. Dealer Admin can add their own staff.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "name", "role"],
+                "properties": {
+                  "email": { "type": "string", "example": "ahmet@merkezoptik.com" },
+                  "password": { "type": "string", "example": "strong-password" },
+                  "name": { "type": "string", "example": "Ahmet Yilmaz" },
+                  "role": { 
+                    "type": "string", 
+                    "enum": ["dealer_admin", "dealer_user"],
+                    "example": "dealer_admin"
+                  },
+                  "dealerId": { 
+                    "type": "integer", 
+                    "description": "Required only if Producer is adding. Automatically assigned when Dealer Admin adds.",
+                    "example": 101
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created successfully." },
+          "403": { "description": "You do not have permission to perform this action." }
         }
       }
     },
@@ -179,32 +230,48 @@
       "get": {
         "tags": ["Analytics"],
         "summary": "Get dealer click statistics",
-        "description": "Returns visit logs for a dealer. Optional date filters available.",
         "parameters": [
           {
             "in": "path",
             "name": "dealerId",
             "required": true,
-            "schema": { "type": "integer" },
-            "description": "Dealer ID to filter stats for"
+            "schema": { "type": "integer" }
           },
           {
             "in": "query",
             "name": "startDate",
             "required": false,
             "schema": { "type": "string", "format": "date" },
-            "description": "Filter logs starting from this date (YYYY-MM-DD)"
+            "description": "Start Date (YYYY-MM-DD)"
           },
           {
             "in": "query",
             "name": "endDate",
             "required": false,
             "schema": { "type": "string", "format": "date" },
-            "description": "Filter logs up to this date (YYYY-MM-DD)"
+            "description": "End Date (YYYY-MM-DD)"
           }
         ],
         "responses": {
           "200": { "description": "Statistics data retrieved." }
+        }
+      }
+    },
+    "/{linkHash}": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "(B2C) Link Tracking and Redirection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "linkHash",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "302": { "description": "Redirect to configurator page." },
+          "404": { "description": "Link not found." }
         }
       }
     }

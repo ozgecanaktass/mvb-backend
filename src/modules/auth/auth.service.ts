@@ -5,16 +5,28 @@ import { User } from '../../shared/models/User';
 import { AuthInputDTO } from './auth.controller';
 import { authRepository } from './auth.repository';
 
-// generate JWT token for authenticated user
-export const signToken = (userId: number, role: string): string => {
+/**
+ * Generate a JWT token for the authenticated user
+ * @param userId - User's ID
+ * @param role - User's role (e.g., 'dealer_admin')
+ * @param dealerId - The Dealer ID this user belongs to (nullable)
+ * @returns Signed JWT string
+ */
+export const signToken = (userId: number, role: string, dealerId: number | null | undefined): string => {
+    // get the secret key from environment variables
     const secret = process.env.JWT_SECRET;
     
     if (!secret) {
         throw new AppError("JWT_SECRET is not defined in environment variables.", 500);
     }
 
+    // sign the token with payload and expiration time
     const token = jwt.sign(
-        { id: userId, role: role },
+        { 
+            id: userId, 
+            role: role,
+            dealerId: dealerId // new
+        },
         secret,
         { expiresIn: '7d' } // token valid for 7 days
     );
@@ -22,7 +34,8 @@ export const signToken = (userId: number, role: string): string => {
     return token;
 };
 
-// authenticate user with email and password
+
+// authenticate user credentials and return user + token
 export const authenticateUser = async ({ email, password }: AuthInputDTO): Promise<{ user: User, token: string }> => {
     
     // check if user exists in Azure SQL Database
@@ -31,20 +44,48 @@ export const authenticateUser = async ({ email, password }: AuthInputDTO): Promi
     if (!user) {
         throw new AppError("Invalid email or password.", 401); 
     }
-    // verify password
+
+    // verify Password
+    // Not: Admin şifresi düz metin olabilir, diğerleri hash'li.
+    // Şimdilik basit kontrol yapıyoruz.
     const isPasswordValid = password === user.passwordHash;
     
     if (!isPasswordValid) {
         throw new AppError("Invalid email or password.", 401);
     }
-    // generate JWT token
-    const token = signToken(user.id, user.role);
+    
+    // generate JWT Token with dealerId
+    const token = signToken(user.id, user.role, user.dealerId);
 
     return { user, token };
 };
 
-// hash password using bcrypt
+/**
+ * Hash a plain text password using bcrypt
+ */
 export const hashPassword = (password: string): Promise<string> => {
-    // 10 salt rounds is the industry standard for bcrypt
     return hash(password, 10); 
+};
+
+// register a new user
+// for dealer_admin to create their staff users
+export const registerUser = async (userData: any): Promise<User> => {
+    // email uniqueness check
+    const existingUser = await authRepository.findByEmail(userData.email);
+    if (existingUser) {
+        throw new AppError("Email is already in use.", 400);
+    }
+
+    // hash password
+    // const hashedPassword = await hashPassword(userData.password);
+    const hashedPassword = userData.password;
+
+    const newUser: User = {
+        ...userData,
+        passwordHash: hashedPassword,
+        isActive: true
+    };
+
+    // save user to database
+    return await authRepository.create(newUser);
 };
