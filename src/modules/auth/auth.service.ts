@@ -48,7 +48,12 @@ export const authenticateUser = async ({ email, password }: AuthInputDTO): Promi
     // verify Password
     // Not: Admin şifresi düz metin olabilir, diğerleri hash'li.
     // Şimdilik basit kontrol yapıyoruz.
-    const isPasswordValid = password === user.passwordHash;
+    let isPasswordValid = false;
+    if (user.passwordHash.startsWith('$2')) {
+        isPasswordValid = await compare(password, user.passwordHash);
+    } else {
+        isPasswordValid = password === user.passwordHash;
+    }
     
     if (!isPasswordValid) {
         throw new AppError("Invalid email or password.", 401);
@@ -77,8 +82,8 @@ export const registerUser = async (userData: any): Promise<User> => {
     }
 
     // hash password
-    // const hashedPassword = await hashPassword(userData.password);
-    const hashedPassword = userData.password;
+    const hashedPassword = await hashPassword(userData.password);
+    //const hashedPassword = userData.password;
 
     const newUser: User = {
         ...userData,
@@ -88,4 +93,39 @@ export const registerUser = async (userData: any): Promise<User> => {
 
     // save user to database
     return await authRepository.create(newUser);
+};
+
+export interface ChangePasswordDTO {
+    userId: number;
+    currentPassword: string;
+    newPassword: string;
+}
+
+export const changePassword = async ({ userId, currentPassword, newPassword }: ChangePasswordDTO): Promise<void> => {
+    // find user by ID
+    const user = await authRepository.findById(userId);
+    if (!user) {
+        throw new AppError("User not found.", 404);
+    }
+
+    // check if current password matches
+    // is the stored password hashed or plain text?
+    let isMatch = false;
+    if (user.passwordHash.startsWith('$2')) { 
+         // password is hashed
+         isMatch = await compare(currentPassword, user.passwordHash);
+    } else {
+         // password is plain text only for seed data
+         isMatch = currentPassword === user.passwordHash;
+    }
+
+    if (!isMatch) {
+        throw new AppError("Current password is incorrect.", 400);
+    }
+
+    // hash the new password
+    const newHashedPassword = await hashPassword(newPassword);
+
+    // update password in database
+    await authRepository.updatePassword(userId, newHashedPassword);
 };

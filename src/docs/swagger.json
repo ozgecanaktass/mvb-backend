@@ -2,8 +2,8 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Eyewear Dealer Management API (MVB)",
-    "version": "1.1.0",
-    "description": "Backend API documentation for dealer management, order tracking, and multi-tenant user management."
+    "version": "1.2.0",
+    "description": "Backend API documentation for dealer management, order tracking, multi-tenant user management, and security features."
   },
   "servers": [
     {
@@ -45,7 +45,8 @@
             "type": "string", 
             "enum": ["producer_admin", "dealer_admin", "dealer_user"] 
           },
-          "dealerId": { "type": "integer", "nullable": true }
+          "dealerId": { "type": "integer", "nullable": true },
+          "dealerLimit": { "type": "integer", "nullable": true, "description": "Max dealers allowed (Producer only)" }
         }
       },
       "Order": {
@@ -57,6 +58,15 @@
           "status": { "type": "string", "enum": ["Pending", "In Production", "Shipped"] },
           "configuration": { "type": "object" },
           "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ChangePassword": {
+        "type": "object",
+        "required": ["currentPassword", "newPassword", "confirmPassword"],
+        "properties": {
+          "currentPassword": { "type": "string", "format": "password" },
+          "newPassword": { "type": "string", "format": "password", "minLength": 6 },
+          "confirmPassword": { "type": "string", "format": "password" }
         }
       }
     }
@@ -92,6 +102,28 @@
         "summary": "Log out (Invalidate Token)",
         "responses": {
           "200": { "description": "Logout successful." }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Change current user's password",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password updated successfully." },
+          "400": { "description": "Validation error (mismatch or weak password)." },
+          "401": { "description": "Unauthorized." }
         }
       }
     },

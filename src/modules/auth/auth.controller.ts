@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { authenticateUser, registerUser } from './auth.service';
+import { authenticateUser, registerUser, changePassword} from './auth.service';
 import { AppError } from '../../shared/utils/AppError';
 
 export interface AuthInputDTO {
@@ -90,5 +90,38 @@ export const createUser = async (req: Request, res: Response) => {
             role: newUser.role,
             dealerId: newUser.dealerId
         }
+    });
+};
+
+// POST /api/v1/auth/change-password
+// change password for logged-in user
+export const updatePassword = async (req: Request, res: Response) => {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    
+    // secure userId from request (set by auth middleware)
+    const userId = req.user!.id; 
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        throw new AppError("Fill all fields (Current Password, New Password, Confirm New Password).", 400);
+    }
+    
+    if (newPassword !== confirmPassword) {
+        throw new AppError("New passwords do not match.", 400);
+    }
+    
+    if (newPassword.length < 6) {
+        throw new AppError("New password must be at least 6 characters long.", 400);
+    }
+
+    // service call to change password
+    await changePassword({ 
+        userId, 
+        currentPassword, 
+        newPassword 
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "Your password has been successfully updated. Please log in again with your new password."
     });
 };

@@ -37,6 +37,37 @@ export const authRepository = {
         }
     },
 
+    // find user by ID for verifyşng user before password change
+    async findById(id: number): Promise<User | undefined> {
+        const pool = await getNewConnection();
+        try {
+            const result = await pool.request()
+                .input('id', sql.BigInt, id)
+                .query(`
+                    SELECT 
+                        id, 
+                        email, 
+                        password_hash as passwordHash, 
+                        name, 
+                        role, 
+                        dealer_id as dealerId, 
+                        dealer_limit as dealerLimit, 
+                        is_active as isActive, 
+                        created_at as createdAt, 
+                        updated_at as updatedAt
+                    FROM users 
+                    WHERE id = @id
+                `);
+            
+            return result.recordset[0] as User | undefined;
+        } catch (error) {
+            console.error('[SQL Error] User not found by ID:', error);
+            return undefined;
+        } finally {
+            pool.close();
+        }
+    },
+
     // Create new user in the database 
     async create(user: User): Promise<User> {
         const pool = await getNewConnection();
@@ -62,6 +93,27 @@ export const authRepository = {
             return { ...user, id: newId };
         } catch (error) {
             console.error('[SQL Error] Failed to create user:', error);
+            throw error;
+        } finally {
+            pool.close();
+        }
+    },
+
+    // update user password
+    // updates the password hash and updated_at timestamp 
+    async updatePassword(userId: number, newPasswordHash: string): Promise<void> {
+        const pool = await getNewConnection();
+        try {
+            await pool.request()
+                .input('id', sql.BigInt, userId)
+                .input('passwordHash', sql.NVarChar, newPasswordHash)
+                .query(`
+                    UPDATE users 
+                    SET password_hash = @passwordHash, updated_at = GETDATE()
+                    WHERE id = @id
+                `);
+        } catch (error) {
+            console.error('[SQL Error] Password update failed:', error);
             throw error;
         } finally {
             pool.close();

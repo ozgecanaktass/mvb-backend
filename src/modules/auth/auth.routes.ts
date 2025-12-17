@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, logout, createUser } from './auth.controller';
+import { login, logout, createUser, updatePassword } from './auth.controller';
 import { catchAsync } from '../../shared/utils/catchAsync';
 import { protect, restrictTo } from '../../middlewares/auth.middleware'; // restrictTo eklendi
 
@@ -25,6 +25,8 @@ router.post('/login', catchAsync(login));
  */
 router.post('/logout', logout);
 
+
+router.post('/change-password', protect, catchAsync(updatePassword));
 /**
  * @swagger
  * /auth/users:
