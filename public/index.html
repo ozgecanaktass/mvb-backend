@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eyewear Dealer Management - Test Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+            <h1 class="text-xl font-bold">Configurator Simulator</h1>
+            <span id="userStatus" class="text-xs bg-blue-500 px-2 py-1 rounded">Guest</span>
+        </div>
+
+        <!-- Notification Area -->
+        <div id="notification" class="hidden p-3 text-sm text-center"></div>
+
+        <!-- 1. LOGIN SCREEN -->
+        <div id="loginScreen" class="p-6 space-y-4">
+            <h2 class="text-lg font-semibold text-gray-700">Sign In</h2>
+            <div>
+                <label class="block text-sm font-medium text-gray-600">Email</label>
+                <input type="email" id="email" class="w-full mt-1 p-2 border rounded focus:ring-2 focus:ring-blue-500" placeholder="admin@uretici.com">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600">Password</label>
+                <input type="password" id="password" class="w-full mt-1 p-2 border rounded focus:ring-2 focus:ring-blue-500" placeholder="admin-sifresi">
+            </div>
+            <button onclick="login()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Sign In</button>
+            
+            <div class="mt-4 text-xs text-gray-500 text-center">
+                <p>Test Accounts:</p>
+                <p>Producer: admin@uretici.com / admin-password</p>
+                <p>Dealer: ahmet@merkezoptik.com / ahmet-password</p>
+            </div>
+        </div>
+
+        <!-- 2. DASHBOARD SCREEN -->
+        <div id="dashboardScreen" class="hidden p-6 space-y-6">
+            
+            <!-- User Info -->
+            <div class="text-center">
+                <p class="text-gray-500">Welcome,</p>
+                <h3 id="userNameDisplay" class="text-xl font-bold text-gray-800">...</h3>
+                <p id="userRoleDisplay" class="text-xs text-blue-500 uppercase font-bold mt-1">...</p>
+                <button onclick="logout()" class="text-xs text-red-500 underline mt-2">Log Out</button>
+            </div>
+
+            <hr>
+
+            <!-- Order Creation Section -->
+            <div>
+                <h3 class="font-bold text-gray-700 mb-2">📦 Create New Order</h3>
+                <div class="space-y-3">
+                    
+                    <!-- NEW: Dealer ID Field (Admin Only) -->
+                    <div id="dealerIdContainer" class="hidden">
+                        <label class="block text-xs font-medium text-gray-500">Dealer ID (For Admin)</label>
+                        <input type="number" id="dealerIdInput" class="w-full p-2 border rounded text-sm" placeholder="e.g., 101">
+                    </div>
+
+                    <input type="text" id="customerName" class="w-full p-2 border rounded text-sm" placeholder="Customer Name (e.g., Ayşe)">
+                    <select id="frameModel" class="w-full p-2 border rounded text-sm">
+                        <option value="Aviator">Aviator</option>
+                        <option value="Wayfarer">Wayfarer</option>
+                        <option value="Round">Round</option>
+                    </select>
+                    <button onclick="createOrder()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">Submit Order</button>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Permission Test Buttons -->
+            <div>
+                <h3 class="font-bold text-gray-700 mb-2">🛡️ Authorization Tests</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="getOrders()" class="bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300 text-xs">List Orders</button>
+                    <button onclick="getStats()" class="bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300 text-xs">View Stats</button>
+                </div>
+                <div id="apiResult" class="mt-2 p-2 bg-gray-50 border rounded text-xs font-mono h-32 overflow-y-auto hidden"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        const API_URL = 'http://localhost:3000/api/v1';
+        let authToken = localStorage.getItem('token');
+        let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+        // On page load
+        if (authToken) {
+            showDashboard();
+        }
+
+        // --- LOGIN PROCESS ---
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    authToken = data.token;
+                    // On successful login we store the user data
+                    currentUser = { id: data.userId, role: data.role, dealerId: data.dealerId };
+                    
+                    localStorage.setItem('token', authToken);
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    
+                    showNotification('Login Successful!', 'success');
+                    showDashboard();
+                } else {
+                    showNotification(data.message || 'Login Failed', 'error');
+                }
+            } catch (err) {
+                showNotification('Server Error', 'error');
+            }
+        }
+
+        // --- LOGOUT PROCESS ---
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            authToken = null;
+            currentUser = {};
+            
+            document.getElementById('dashboardScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('userStatus').innerText = 'Guest';
+            document.getElementById('apiResult').classList.add('hidden');
+        }
+
+        // --- CREATE ORDER ---
+        async function createOrder() {
+            const customerName = document.getElementById('customerName').value;
+            const frameModel = document.getElementById('frameModel').value;
+            const dealerIdInput = document.getElementById('dealerIdInput').value;
+
+            // Logic:
+            // 1. If admin, use the ID entered in the input.
+            // 2. If dealer, use their own ID (currentUser.dealerId).
+            let targetDealerId;
+
+            if (currentUser.role === 'producer_admin') {
+                targetDealerId = dealerIdInput ? parseInt(dealerIdInput) : null;
+                if (!targetDealerId) {
+                    showNotification('Please enter a Dealer ID (Admin)', 'error');
+                    return;
+                }
+            } else {
+                targetDealerId = currentUser.dealerId;
+            }
+
+            const payload = {
+                dealerId: targetDealerId,
+                customerName: customerName,
+                configuration: { model: frameModel, price: 1500 }
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/orders`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    showNotification('Order received! ID: ' + data.data.id, 'success');
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (err) {
+                showNotification('An error occurred', 'error');
+            }
+        }
+
+        // --- DATA FETCH (GET) ---
+        async function getOrders() {
+            callApi('/orders');
+        }
+
+        async function getStats() {
+            // If admin, take from input or default to 3 (for testing)
+            const inputId = document.getElementById('dealerIdInput').value;
+            const targetId = currentUser.dealerId || inputId || 3;
+            
+            const statsUrl = `http://localhost:3000/l/stats/${targetId}`;
+            
+            try {
+                const res = await fetch(statsUrl, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json();
+                showResult(data);
+            } catch(err) {
+                showResult({ error: "Failed to fetch statistics" });
+            }
+        }
+
+        async function callApi(endpoint) {
+            try {
+                const res = await fetch(`${API_URL}${endpoint}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json();
+                showResult(data);
+            } catch (err) {
+                showResult({ error: 'Request failed' });
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').classList.remove('hidden');
+            
+            document.getElementById('userNameDisplay').innerText = currentUser.role === 'producer_admin' ? 'Producer Admin' : 'Dealer Manager';
+            document.getElementById('userRoleDisplay').innerText = currentUser.role;
+            document.getElementById('userStatus').innerText = 'Online';
+
+            // --- NEW: show Dealer ID box if admin ---
+            const dealerIdContainer = document.getElementById('dealerIdContainer');
+            if (currentUser.role === 'producer_admin') {
+                dealerIdContainer.classList.remove('hidden');
+            } else {
+                dealerIdContainer.classList.add('hidden');
+            }
+        }
+
+        function showResult(data) {
+            const el = document.getElementById('apiResult');
+            el.classList.remove('hidden');
+            el.innerText = JSON.stringify(data, null, 2);
+        }
+
+        function showNotification(msg, type) {
+            const el = document.getElementById('notification');
+            el.innerText = msg;
+            el.className = `p-3 text-sm text-center font-bold ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+    </script>
+</body>
+</html>

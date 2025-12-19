@@ -1,9 +1,12 @@
 import sql from 'mssql';
-import { getNewConnection } from '../../shared/database/azureSql'; // YENİ: Havuzsuz bağlantı fonksiyonu
+import { getNewConnection } from '../../shared/database/azureSql'; // Use pool-less connection
 import { Order, CreateOrderDTO } from '../../shared/models/Order';
 
 export const orderRepository = {
-// retrieve all orders from the database
+    
+    /**
+     * Retrieve all orders from the database (For Producer Admin).
+     */
     async findAll(): Promise<Order[]> {
         const pool = await getNewConnection();
         try {
@@ -20,14 +23,46 @@ export const orderRepository = {
                 configuration: JSON.parse(row.configuration) 
             })) as Order[];
         } catch (error) {
-            console.error('[SQL ERROR]: FAILED TO FETCH ORDERS:', error);
+            console.error('[SQL Error] Failed to fetch all orders:', error);
             return [];
         } finally {
             pool.close();
         }
     },
 
-    // find order by ID
+    /**
+     * YENİ: Retrieve orders for a specific dealer (Data Isolation).
+     * Used for Dealer Admins and Users to see only their own orders.
+     */
+    async findByDealerId(dealerId: number): Promise<Order[]> {
+        const pool = await getNewConnection();
+        try {
+            const result = await pool.request()
+                .input('dealerId', sql.BigInt, dealerId)
+                .query(`
+                    SELECT 
+                        id, dealer_id as dealerId, customer_name as customerName,
+                        configuration, status, created_at as createdAt, updated_at as updatedAt
+                    FROM orders 
+                    WHERE dealer_id = @dealerId
+                    ORDER BY created_at DESC
+                `);
+            
+            return result.recordset.map(row => ({
+                ...row,
+                configuration: JSON.parse(row.configuration) 
+            })) as Order[];
+        } catch (error) {
+            console.error('[SQL Error] Failed to fetch dealer orders:', error);
+            return [];
+        } finally {
+            pool.close();
+        }
+    },
+
+    /**
+     * Find a single order by ID.
+     */
     async findById(id: number): Promise<Order | undefined> {
         const pool = await getNewConnection();
         try {
@@ -49,14 +84,16 @@ export const orderRepository = {
                 configuration: JSON.parse(row.configuration)
             } as Order;
         } catch (error) {
-            console.error('[SQL ERROR]: FAILED TO FETCH ORDER:', error);
+            console.error('[SQL Error] Order not found:', error);
             return undefined;
         } finally {
             pool.close();
         }
     },
 
-    // create new order
+    /**
+     * Create a new order.
+     */
     async create(orderData: CreateOrderDTO): Promise<Order> {
         const pool = await getNewConnection();
         try {
@@ -89,7 +126,9 @@ export const orderRepository = {
         }
     },
 
-    // update order status
+    /**
+     * Update order status.
+     */
     async updateStatus(id: number, status: string): Promise<void> {
         const pool = await getNewConnection();
         try {

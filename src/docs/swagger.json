@@ -200,6 +200,7 @@
       "get": {
         "tags": ["Orders"],
         "summary": "List all orders",
+        "security": [{ "bearerAuth": [] }], 
         "responses": {
           "200": { "description": "List of orders." }
         }
@@ -207,6 +208,7 @@
       "post": {
         "tags": ["Orders"],
         "summary": "Create a new order (from Configurator)",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "content": {
             "application/json": {
@@ -262,6 +264,7 @@
       "get": {
         "tags": ["Analytics"],
         "summary": "Get dealer click statistics",
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
             "in": "path",
@@ -285,25 +288,9 @@
           }
         ],
         "responses": {
-          "200": { "description": "Statistics data retrieved." }
-        }
-      }
-    },
-    "/{linkHash}": {
-      "get": {
-        "tags": ["Analytics"],
-        "summary": "(B2C) Link Tracking and Redirection",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "linkHash",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "302": { "description": "Redirect to configurator page." },
-          "404": { "description": "Link not found." }
+          "200": { "description": "Statistics data retrieved." },
+          "401": { "description": "Unauthorized access (Token missing)." },
+          "403": { "description": "Forbidden (Accessing other dealer's data)." }
         }
       }
     }

@@ -2,9 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../shared/utils/AppError';
 
-// new : added dealerId to JwtPayload
 interface JwtPayload {
     id: number;
+    email: string;
     role: string;
     dealerId?: number | null; 
 }
@@ -17,7 +17,8 @@ declare global {
     }
 }
 
-// check if the user is authenticated
+// authentication middleware 
+// used to protect routes that require authentication
 export const protect = (req: Request, res: Response, next: NextFunction) => {
     let token;
 
@@ -27,7 +28,7 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
     }
 
     if (!token) {
-        return next(new AppError('Token is missing', 401));
+        return next(new AppError('Login to access this route', 401));
     }
 
     // verify token
@@ -40,16 +41,18 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
         next();
         
     } catch (error) {
-        return next(new AppError('Token is invalid or expired', 401));
+        return next(new AppError('Session has expired or token is invalid. Please login again.', 401));
     }
 };
 
-// restrict access based on user roles
+/**
+ * Role-Based Access Control (RBAC) Middleware
+ * only allows users with specified roles to access the route
+ */
 export const restrictTo = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
-        // req.user is set in the protect middleware
         if (!req.user || !roles.includes(req.user.role)) {
-            return next(new AppError('You do not have permission to perform this action', 403));
+            return next(new AppError('You do not have permission to perform this action.', 403));
         }
         next();
     };
