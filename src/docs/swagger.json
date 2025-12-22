@@ -3,7 +3,7 @@
   "info": {
     "title": "Eyewear Dealer Management API (MVB)",
     "version": "1.2.0",
-    "description": "Backend API documentation for dealer management, order tracking, multi-tenant user management, and security features."
+    "description": "Backend API documentation for dealer management, order tracking, multi-tenant user management, appointments, and security features."
   },
   "servers": [
     {
@@ -57,6 +57,19 @@
           "customerName": { "type": "string" },
           "status": { "type": "string", "enum": ["Pending", "In Production", "Shipped"] },
           "configuration": { "type": "object" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Appointment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "dealerId": { "type": "integer" },
+          "customerName": { "type": "string" },
+          "appointmentDate": { "type": "string", "format": "date-time" },
+          "type": { "type": "string", "enum": ["Eye Exam", "Styling", "Adjustment", "Other"] },
+          "status": { "type": "string", "enum": ["Scheduled", "Completed", "Cancelled", "No Show"] },
+          "notes": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" }
         }
       },
@@ -200,7 +213,7 @@
       "get": {
         "tags": ["Orders"],
         "summary": "List all orders",
-        "security": [{ "bearerAuth": [] }], 
+        "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": { "description": "List of orders." }
         }
@@ -260,6 +273,72 @@
         }
       }
     },
+    "/appointments": {
+      "get": {
+        "tags": ["Appointments"],
+        "summary": "List all appointments",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of appointments." }
+        }
+      },
+      "post": {
+        "tags": ["Appointments"],
+        "summary": "Create a new appointment",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["dealerId", "customerName", "appointmentDate"],
+                "properties": {
+                  "dealerId": { "type": "integer" },
+                  "customerName": { "type": "string" },
+                  "appointmentDate": { "type": "string", "format": "date-time" },
+                  "type": { "type": "string", "enum": ["Eye Exam", "Styling", "Adjustment", "Other"] },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Appointment created successfully." }
+        }
+      }
+    },
+    "/appointments/{id}/status": {
+      "patch": {
+        "tags": ["Appointments"],
+        "summary": "Update appointment status",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "string", "enum": ["Scheduled", "Completed", "Cancelled", "No Show"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Status updated successfully." }
+        }
+      }
+    },
     "/stats/{dealerId}": {
       "get": {
         "tags": ["Analytics"],
@@ -291,6 +370,24 @@
           "200": { "description": "Statistics data retrieved." },
           "401": { "description": "Unauthorized access (Token missing)." },
           "403": { "description": "Forbidden (Accessing other dealer's data)." }
+        }
+      }
+    },
+    "/{linkHash}": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "(B2C) Link Tracking and Redirection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "linkHash",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "302": { "description": "Redirect to configurator page." },
+          "404": { "description": "Link not found." }
         }
       }
     }

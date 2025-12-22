@@ -4,13 +4,13 @@ import dotenv from 'dotenv';
 import path from 'path';
 import https from 'https';
 
-// .env dosyasını yükle
+// Load .env file
 const envPath = path.resolve(process.cwd(), '.env');
 dotenv.config({ path: envPath });
 
-console.log(`🔍 Yapılandırma dosyası: ${envPath}`);
+console.log(`🔍 Configuration file: ${envPath}`);
 
-// SQL Ayarları
+// SQL Settings
 const sqlConfig = {
     user: process.env.DB_USER || 'sa',
     password: process.env.DB_PASS || 'TestPassword123@',
@@ -20,38 +20,38 @@ const sqlConfig = {
     options: { encrypt: false, trustServerCertificate: true }
 };
 
-// Cosmos Ayarları
+// Cosmos Settings
 const cosmosEndpoint = process.env.COSMOS_ENDPOINT;
 const cosmosKey = process.env.COSMOS_KEY;
 const cosmosDbId = process.env.COSMOS_DATABASE_ID || 'EyewearDB';
 const cosmosContainerId = 'visits';
 
 const runSeed = async () => {
-    console.log("🚀 Veritabanı kurulumu (Seed) başlatılıyor...");
+    console.log("🚀 Starting database seed...");
 
-    // --- 1. SQL SERVER KURULUMU ---
+    // --- 1. SQL SERVER SETUP ---
     try {
-        console.log("🔌 [SQL] Sunucuya bağlanılıyor...");
+        console.log("🔌 [SQL] Connecting to server...");
         const pool = await sql.connect(sqlConfig);
 
-        // DB Oluştur
+        // Create DB
         await pool.query(`
             IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '${process.env.DB_NAME || 'EyewearDB'}')
             BEGIN
                 CREATE DATABASE ${process.env.DB_NAME || 'EyewearDB'};
-                PRINT 'SQL Veritabanı oluşturuldu.';
+                PRINT 'SQL Database created.';
             END
         `);
         
         await pool.close();
         
-        // Asıl DB'ye bağlan
+        // Connect to actual DB
         const appPool = await sql.connect({ ...sqlConfig, database: process.env.DB_NAME || 'EyewearDB' });
-        console.log("✅ [SQL] Veritabanına geçildi. Tablolar kontrol ediliyor...");
+        console.log("✅ [SQL] Connected to database. Checking tables...");
 
-        // Tabloları Oluştur (Sıralama Düzeltildi: Dealers -> Users -> Orders)
+        // Create Tables (Order: Dealers -> Users -> Orders -> Appointments)
         const createTablesQuery = `
-            -- 1. Dealers Tablosu (Önce bunu oluşturuyoruz çünkü Users buna bağlı)
+            -- 1. Dealers Table
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='dealers' and xtype='U')
             BEGIN
                 CREATE TABLE dealers (
@@ -62,10 +62,10 @@ const runSeed = async () => {
                     created_at datetimeoffset DEFAULT SYSUTCDATETIME(),
                     updated_at datetimeoffset DEFAULT SYSUTCDATETIME()
                 );
-                PRINT 'Dealers tablosu oluşturuldu.';
+                PRINT 'Dealers table created.';
             END
 
-            -- 2. Users Tablosu (Dealers tablosuna referans verdiği için ondan sonra gelmeli)
+            -- 2. Users Table
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='users' and xtype='U')
             BEGIN
                 CREATE TABLE users (
@@ -74,16 +74,16 @@ const runSeed = async () => {
                     password_hash nvarchar(512) NOT NULL,
                     name nvarchar(255) NULL,
                     role nvarchar(50) DEFAULT 'dealer_user',
-                    dealer_id bigint NULL REFERENCES dealers(id), -- FK hatası vermemesi için dealers tablosu var olmalı
+                    dealer_id bigint NULL REFERENCES dealers(id),
                     dealer_limit int DEFAULT 10,
                     is_active bit DEFAULT 1,
                     created_at datetimeoffset DEFAULT SYSUTCDATETIME(),
                     updated_at datetimeoffset DEFAULT SYSUTCDATETIME()
                 );
-                PRINT 'Users tablosu oluşturuldu.';
+                PRINT 'Users table created.';
             END
 
-            -- 3. Orders Tablosu
+            -- 3. Orders Table
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='orders' and xtype='U')
             BEGIN
                 CREATE TABLE orders (
@@ -96,35 +96,52 @@ const runSeed = async () => {
                     updated_at datetimeoffset DEFAULT SYSUTCDATETIME(),
                     FOREIGN KEY (dealer_id) REFERENCES dealers(id)
                 );
-                PRINT 'Orders tablosu oluşturuldu.';
+                PRINT 'Orders table created.';
+            END
+
+            -- 4. Appointments Table (NEW)
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='appointments' and xtype='U')
+            BEGIN
+                CREATE TABLE appointments (
+                    id bigint PRIMARY KEY IDENTITY(1,1),
+                    dealer_id bigint NOT NULL,
+                    customer_name nvarchar(255) NOT NULL,
+                    appointment_date datetimeoffset NOT NULL,
+                    type nvarchar(50), -- 'Eye Exam', 'Styling' etc.
+                    status nvarchar(50) DEFAULT 'Scheduled',
+                    notes nvarchar(max) NULL,
+                    created_at datetimeoffset DEFAULT SYSUTCDATETIME(),
+                    updated_at datetimeoffset DEFAULT SYSUTCDATETIME(),
+                    FOREIGN KEY (dealer_id) REFERENCES dealers(id)
+                );
+                PRINT 'Appointments table created.';
             END
         `;
         await appPool.query(createTablesQuery);
 
-        // Admin Ekle
+        // Add Admin User (Seed Data)
         const checkUser = await appPool.query("SELECT * FROM users WHERE email = 'admin@uretici.com'");
         if (checkUser.recordset.length === 0) {
-            // Admin, dealer_id'si NULL olan bir kullanıcıdır.
             await appPool.query(`
                 INSERT INTO users (email, password_hash, name, role, dealer_id) 
                 VALUES ('admin@uretici.com', 'admin-sifresi', 'Admin', 'producer_admin', NULL)
             `);
-            console.log("👤 [SQL] Admin kullanıcısı eklendi.");
+            console.log("👤 [SQL] Admin user added.");
         }
         
         await appPool.close();
-        console.log("✅ [SQL] SQL Server kurulumu tamamlandı.");
+        console.log("✅ [SQL] SQL Server setup completed.");
 
     } catch (error) {
-        console.error("❌ [SQL Hatası]:", error);
+        console.error("❌ [SQL Error]:", error);
     }
 
-    // --- 2. COSMOS DB KURULUMU ---
+    // --- 2. COSMOS DB SETUP ---
     try {
         if (!cosmosEndpoint || !cosmosKey) {
-            console.warn("⚠️ [Cosmos] Ayarlar eksik, kurulum atlanıyor.");
+            console.warn("⚠️ [Cosmos] Settings missing, skipping setup.");
         } else {
-            console.log("🔌 [Cosmos] Emülatöre bağlanılıyor...");
+            console.log("🔌 [Cosmos] Connecting to emulator...");
             
             const client = new CosmosClient({ 
                 endpoint: cosmosEndpoint, 
@@ -135,21 +152,21 @@ const runSeed = async () => {
             });
 
             const { database } = await client.databases.createIfNotExists({ id: cosmosDbId });
-            console.log(`🔨 [Cosmos] Veritabanı '${database.id}' hazır.`);
+            console.log(`🔨 [Cosmos] Database '${database.id}' ready.`);
 
             const { container } = await database.containers.createIfNotExists({ 
                 id: cosmosContainerId, 
                 partitionKey: { paths: ['/linkHash'] } 
             });
-            console.log(`📦 [Cosmos] Konteyner '${container.id}' hazır.`);
+            console.log(`📦 [Cosmos] Container '${container.id}' ready.`);
             
-            console.log("✅ [Cosmos] Cosmos DB kurulumu tamamlandı.");
+            console.log("✅ [Cosmos] Cosmos DB setup completed.");
         }
     } catch (error) {
-        console.error("❌ [Cosmos Hatası]:", error);
+        console.error("❌ [Cosmos Error]:", error);
     }
 
-    console.log("🚀 KURULUM BİTTİ. 'npm run dev' ile uygulamayı başlatabilirsin.");
+    console.log("🚀 SETUP FINISHED. You can start the app with 'npm run dev'.");
 };
 
 runSeed();
