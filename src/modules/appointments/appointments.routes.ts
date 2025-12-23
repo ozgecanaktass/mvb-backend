@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createAppointment, getAppointments, updateAppointmentStatus } from './appointments.controller';
-import { protect } from '../../middlewares/auth.middleware'; // Authentication middleware
+import { protect } from '../../middlewares/auth.middleware';
 
 const router = Router();
 
@@ -23,8 +23,6 @@ const router = Router();
  * 200:
  * description: Randevu listesi.
  */
-// GET /api/v1/appointments
-// Kullanıcı rolüne göre (Admin -> Hepsi, Bayi -> Kendisi) filtrelenmiş liste döner.
 router.get('/', protect, getAppointments);
 
 /**
@@ -59,8 +57,6 @@ router.get('/', protect, getAppointments);
  * 201:
  * description: Randevu başarıyla oluşturuldu.
  */
-// POST /api/v1/appointments
-// Yeni randevu kaydı. Bayi personeli eklerken dealerId otomatik atanır.
 router.post('/', protect, createAppointment);
 
 /**
@@ -91,8 +87,6 @@ router.post('/', protect, createAppointment);
  * 200:
  * description: Durum güncellendi.
  */
-// PATCH /api/v1/appointments/:id/status
-// Randevu durumunu değiştir (Örn: İptal edildi, Tamamlandı).
 router.patch('/:id/status', protect, updateAppointmentStatus);
 
 export default router;

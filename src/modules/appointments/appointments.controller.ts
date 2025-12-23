@@ -3,12 +3,7 @@ import { CreateAppointmentDTO, Appointment, UpdateAppointmentStatusDTO } from '.
 import { AppError } from '../../shared/utils/AppError';
 import { appointmentRepository } from './appointments.repository';
 
-/**
- * GET /api/v1/appointments
- * Lists appointments based on user role (Data Isolation).
- * - Producer Admin: Sees all appointments.
- * - Dealer Admin/User: Sees only appointments for their own dealer.
- */
+// GET /api/v1/appointments
 export const getAppointments = async (req: Request, res: Response) => {
     try {
         const user = req.user;
@@ -19,16 +14,13 @@ export const getAppointments = async (req: Request, res: Response) => {
 
         let appointments: Appointment[] = [];
 
-        // Scenario A: Producer Admin -> Fetch ALL
+        // Producer Admin -> Fetch ALL
         if (user.role === 'producer_admin') {
             appointments = await appointmentRepository.findAll();
-        } 
-        // Scenario B: Dealer Admin or Staff -> Fetch ONLY their Dealer's data
+        }
+        // Dealer Admin or Staff -> Fetch ONLY their Dealer's data
         else if (user.dealerId) {
             appointments = await appointmentRepository.findByDealerId(Number(user.dealerId));
-        } else {
-            // Dealer role but no dealerId provided (should not happen)
-            appointments = [];
         }
 
         res.status(200).json({
@@ -38,16 +30,11 @@ export const getAppointments = async (req: Request, res: Response) => {
         });
     } catch (error) {
         if (error instanceof AppError) throw error;
-        console.error("Error fetching appointments:", error);
         throw new AppError("Failed to fetch appointments.", 500);
     }
 };
 
-/**
- * POST /api/v1/appointments
- * Creates a new appointment.
- * Enforces security by overriding dealerId for dealer users.
- */
+// POST /api/v1/appointments
 export const createAppointment = async (req: Request, res: Response) => {
     let { dealerId, customerName, appointmentDate, type, notes } = req.body as CreateAppointmentDTO;
     const user = req.user;
@@ -57,7 +44,7 @@ export const createAppointment = async (req: Request, res: Response) => {
         if (user.dealerId) {
             dealerId = user.dealerId;
         } else {
-             throw new AppError("Dealer ID not found for user.", 400);
+            throw new AppError("Dealer ID not found for user.", 400);
         }
     }
 
@@ -80,15 +67,11 @@ export const createAppointment = async (req: Request, res: Response) => {
             data: newAppointment
         });
     } catch (error) {
-        console.error("Error creating appointment:", error);
         throw new AppError("Failed to create appointment.", 500);
     }
 };
 
-/**
- * PATCH /api/v1/appointments/:id/status
- * Updates the status of an appointment.
- */
+// PATCH /api/v1/appointments/:id/status
 export const updateAppointmentStatus = async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const { status } = req.body as UpdateAppointmentStatusDTO;
@@ -98,14 +81,11 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
     }
 
     try {
-        // Check if appointment exists
         const appointment = await appointmentRepository.findById(id);
         if (!appointment) {
             throw new AppError("Appointment not found.", 404);
         }
 
-        // TODO: Ensure dealer can only update their own appointment (future enhancement)
-        
         await appointmentRepository.updateStatus(id, status);
 
         res.status(200).json({

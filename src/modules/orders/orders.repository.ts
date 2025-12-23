@@ -3,9 +3,9 @@ import { getNewConnection } from '../../shared/database/azureSql'; // Use pool-l
 import { Order, CreateOrderDTO } from '../../shared/models/Order';
 
 export const orderRepository = {
-    
+
     /**
-     * Retrieve all orders from the database (For Producer Admin).
+     * retrieve all orders from the database -> for producer admins
      */
     async findAll(): Promise<Order[]> {
         const pool = await getNewConnection();
@@ -17,10 +17,10 @@ export const orderRepository = {
                 FROM orders 
                 ORDER BY created_at DESC
             `);
-            
+
             return result.recordset.map(row => ({
                 ...row,
-                configuration: JSON.parse(row.configuration) 
+                configuration: JSON.parse(row.configuration)
             })) as Order[];
         } catch (error) {
             console.error('[SQL Error] Failed to fetch all orders:', error);
@@ -30,10 +30,7 @@ export const orderRepository = {
         }
     },
 
-    /**
-     * YENİ: Retrieve orders for a specific dealer (Data Isolation).
-     * Used for Dealer Admins and Users to see only their own orders.
-     */
+    // Retrieve orders for a specific dealer -> used for dealer users/admins
     async findByDealerId(dealerId: number): Promise<Order[]> {
         const pool = await getNewConnection();
         try {
@@ -47,10 +44,10 @@ export const orderRepository = {
                     WHERE dealer_id = @dealerId
                     ORDER BY created_at DESC
                 `);
-            
+
             return result.recordset.map(row => ({
                 ...row,
-                configuration: JSON.parse(row.configuration) 
+                configuration: JSON.parse(row.configuration)
             })) as Order[];
         } catch (error) {
             console.error('[SQL Error] Failed to fetch dealer orders:', error);
@@ -103,7 +100,7 @@ export const orderRepository = {
                 .input('dealerId', sql.BigInt, orderData.dealerId)
                 .input('customerName', sql.NVarChar, orderData.customerName)
                 .input('configuration', sql.NVarChar(sql.MAX), configString)
-                .input('status', sql.NVarChar, 'Pending') 
+                .input('status', sql.NVarChar, 'Pending')
                 .query(`
                     INSERT INTO orders (dealer_id, customer_name, configuration, status, created_at, updated_at)
                     OUTPUT INSERTED.id, INSERTED.created_at as createdAt, INSERTED.updated_at as updatedAt
@@ -111,7 +108,7 @@ export const orderRepository = {
                 `);
 
             const inserted = result.recordset[0];
-            
+
             return {
                 id: inserted.id,
                 dealerId: orderData.dealerId,
