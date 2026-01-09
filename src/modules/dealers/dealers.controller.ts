@@ -8,7 +8,7 @@ import { dealerRepository } from './dealers.repository';
 export const getDealers = async (req: Request, res: Response) => {
     try {
         const dealers = await dealerRepository.findAll();
-        
+
         res.status(200).json({
             success: true,
             count: dealers.length,
@@ -28,7 +28,7 @@ export const createDealer = async (req: Request, res: Response) => {
     }
 
     const newDealer: Dealer = {
-        id: 0, 
+        id: 0,
         name,
         currentLinkHash: uuidv4(),
         isActive: true,
@@ -41,7 +41,7 @@ export const createDealer = async (req: Request, res: Response) => {
 
         res.status(201).json({
             success: true,
-            message: "Dealer successfully saved to Azure SQL.",
+            message: "Dealer successfully saved. (Firebase)",
             data: savedDealer
         });
     } catch (error) {

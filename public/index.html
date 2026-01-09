@@ -1,266 +1,992 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eyewear Dealer Management - Test Panel</title>
+    <title>EyeSys - Admin Dashboard</title>
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5', // Indigo 600
+                        secondary: '#6366F1', // Indigo 500
+                        dark: '#1F2937', // Gray 800
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
     <style>
-        .hidden { display: none; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .sidebar-link.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: #4F46E5;
+            border-right: 3px solid #4F46E5;
+        }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden">
-        
-        <!-- Header -->
-        <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
-            <h1 class="text-xl font-bold">Configurator Simulator</h1>
-            <span id="userStatus" class="text-xs bg-blue-500 px-2 py-1 rounded">Guest</span>
+<body class="bg-gray-50 font-sans text-gray-800 h-screen flex overflow-hidden">
+
+    <!-- LOGIN MODAL -->
+    <div id="loginModal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex items-center justify-center fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-purple-600"></div>
+            <div
+                class="bg-indigo-50 text-indigo-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                <i class="fas fa-glasses text-3xl"></i>
+            </div>
+            <h2 class="text-3xl font-bold mb-2 text-gray-800">Welcome Back</h2>
+            <p class="text-gray-500 mb-8">Sign in to access the EyeSys Dashboard.</p>
+
+            <form onsubmit="handleLogin(event)" class="space-y-5 text-left">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+                    <input type="email" id="loginEmail" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                        placeholder="name@company.com" value="admin@uretici.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
+                    <input type="password" id="loginPassword" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                        placeholder="••••••••" value="admin-sifresi">
+                </div>
+                <button type="submit" id="loginBtn"
+                    class="w-full bg-primary text-white font-bold py-3.5 rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition transform active:scale-95">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="mt-6 text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-gray-100 text-left">
+                <p class="mb-1"><strong class="text-gray-600">Admin:</strong> admin@uretici.com / admin-sifresi</p>
+                <p><strong class="text-gray-600">Dealer:</strong> zeynep@randevuoptik.com / zeynep-sifresi</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar"
+        class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm hidden md:flex transition-all duration-300">
+        <div class="h-16 flex items-center px-6 border-b border-gray-100">
+            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white mr-3 shadow-sm">
+                <i class="fas fa-eye"></i>
+            </div>
+            <span class="text-xl font-bold text-gray-800 tracking-tight">EyeSys</span>
         </div>
 
-        <!-- Notification Area -->
-        <div id="notification" class="hidden p-3 text-sm text-center"></div>
+        <nav class="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+            <p class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Main</p>
+            <button onclick="switchTab('home')" id="nav-home"
+                class="sidebar-link w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition flex items-center mb-1">
+                <i class="fas fa-home w-8 text-center"></i> Dashboard
+            </button>
+            <button onclick="switchTab('orders')" id="nav-orders"
+                class="sidebar-link w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition flex items-center mb-1">
+                <i class="fas fa-shopping-cart w-8 text-center"></i> Orders
+            </button>
+            <button onclick="switchTab('appointments')" id="nav-appointments"
+                class="sidebar-link w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition flex items-center mb-1">
+                <i class="fas fa-calendar-alt w-8 text-center"></i> Appointments
+            </button>
+            <button onclick="switchTab('files')" id="nav-files"
+                class="sidebar-link w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition flex items-center mb-1">
+                <i class="fas fa-folder-open w-8 text-center"></i> Files
+            </button>
+            <button onclick="switchTab('analytics')" id="nav-analytics"
+                class="sidebar-link w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition flex items-center mb-1">
+                <i class="fas fa-chart-pie w-8 text-center"></i> Analytics
+            </button>
 
-        <!-- 1. LOGIN SCREEN -->
-        <div id="loginScreen" class="p-6 space-y-4">
-            <h2 class="text-lg font-semibold text-gray-700">Sign In</h2>
-            <div>
-                <label class="block text-sm font-medium text-gray-600">Email</label>
-                <input type="email" id="email" class="w-full mt-1 p-2 border rounded focus:ring-2 focus:ring-blue-500" placeholder="admin@uretici.com">
+            <div id="admin-menu" class="hidden mt-6">
+                <p class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Admin</p>
+                <button onclick="switchTab('staff')" id="nav-staff"
+                    class="sidebar-link w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition flex items-center mb-1">
+                    <i class="fas fa-users w-8 text-center"></i> Staff
+                </button>
+                <button onclick="switchTab('dealers')" id="nav-dealers"
+                    class="sidebar-link w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition flex items-center mb-1 hidden">
+                    <i class="fas fa-store w-8 text-center"></i> Dealers
+                </button>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-600">Password</label>
-                <input type="password" id="password" class="w-full mt-1 p-2 border rounded focus:ring-2 focus:ring-blue-500" placeholder="admin-sifresi">
-            </div>
-            <button onclick="login()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Sign In</button>
-            
-            <div class="mt-4 text-xs text-gray-500 text-center">
-                <p>Test Accounts:</p>
-                <p>Producer: admin@uretici.com / admin-password</p>
-                <p>Dealer: ahmet@merkezoptik.com / ahmet-password</p>
+        </nav>
+
+        <div class="div px-4 py-4 border-t border-gray-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-gray-900 truncate" id="sidebarUserName">User</p>
+                    <p class="text-xs text-gray-500 truncate" id="sidebarUserRole">Role</p>
+                </div>
+                <button onclick="logout()" class="text-gray-400 hover:text-red-500 transition" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
             </div>
         </div>
+    </aside>
 
-        <!-- 2. DASHBOARD SCREEN -->
-        <div id="dashboardScreen" class="hidden p-6 space-y-6">
-            
-            <!-- User Info -->
-            <div class="text-center">
-                <p class="text-gray-500">Welcome,</p>
-                <h3 id="userNameDisplay" class="text-xl font-bold text-gray-800">...</h3>
-                <p id="userRoleDisplay" class="text-xs text-blue-500 uppercase font-bold mt-1">...</p>
-                <button onclick="logout()" class="text-xs text-red-500 underline mt-2">Log Out</button>
-            </div>
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <!-- HEADER (Mobile) -->
+        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 md:hidden">
+            <span class="font-bold text-lg text-primary">EyeSys</span>
+            <button onclick="toggleSidebar()" class="text-gray-600 focus:outline-none">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </header>
 
-            <hr>
+        <!-- Dynamic Content Area -->
+        <div id="content-area" class="flex-1 overflow-y-auto p-4 md:p-8 relative">
 
-            <!-- Order Creation Section -->
-            <div>
-                <h3 class="font-bold text-gray-700 mb-2">📦 Create New Order</h3>
-                <div class="space-y-3">
-                    
-                    <!-- NEW: Dealer ID Field (Admin Only) -->
-                    <div id="dealerIdContainer" class="hidden">
-                        <label class="block text-xs font-medium text-gray-500">Dealer ID (For Admin)</label>
-                        <input type="number" id="dealerIdInput" class="w-full p-2 border rounded text-sm" placeholder="e.g., 101">
+            <!-- 1. HOME -->
+            <section id="view-home" class="fade-in space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800">Dashboard Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                        <div
+                            class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mr-4 text-xl">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Total Orders</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="statOrders">-</h3>
+                        </div>
                     </div>
-
-                    <input type="text" id="customerName" class="w-full p-2 border rounded text-sm" placeholder="Customer Name (e.g., Ayşe)">
-                    <select id="frameModel" class="w-full p-2 border rounded text-sm">
-                        <option value="Aviator">Aviator</option>
-                        <option value="Wayfarer">Wayfarer</option>
-                        <option value="Round">Round</option>
-                    </select>
-                    <button onclick="createOrder()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition">Submit Order</button>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                        <div
+                            class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mr-4 text-xl">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Appointments</p>
+                            <h3 class="text-2xl font-bold text-gray-800" id="statAppts">-</h3>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <hr>
-
-            <!-- Permission Test Buttons -->
-            <div>
-                <h3 class="font-bold text-gray-700 mb-2">🛡️ Authorization Tests</h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="getOrders()" class="bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300 text-xs">List Orders</button>
-                    <button onclick="getStats()" class="bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300 text-xs">View Stats</button>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-bold text-gray-700 mb-4">Quick Actions</h3>
+                    <div class="flex gap-4">
+                        <button onclick="switchTab('orders')"
+                            class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition">
+                            <i class="fas fa-plus mr-2"></i> New Order
+                        </button>
+                        <button onclick="switchTab('appointments')"
+                            class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 transition">
+                            <i class="fas fa-calendar-plus mr-2"></i> Book Appointment
+                        </button>
+                    </div>
                 </div>
-                <div id="apiResult" class="mt-2 p-2 bg-gray-50 border rounded text-xs font-mono h-32 overflow-y-auto hidden"></div>
-            </div>
+            </section>
+
+            <!-- 2. ORDERS -->
+            <section id="view-orders" class="hidden fade-in space-y-6">
+                <div class="flex justify-between items-end">
+                    <h2 class="text-2xl font-bold text-gray-800">Order Management</h2>
+                    <button onclick="fetchOrders()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"><i
+                            class="fas fa-sync-alt mr-1"></i> Refresh</button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wide">Create New Order</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <select id="orderModel"
+                            class="p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none">
+                            <option value="RayBan">RayBan</option>
+                            <option value="Oakley">Oakley</option>
+                            <option value="Prada">Prada</option>
+                        </select>
+                        <input type="text" id="orderCustomer" placeholder="Customer Name"
+                            class="p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none">
+
+                        <!-- Admin Only Input -->
+                        <div id="orderDealerIdContainer" class="hidden">
+                            <input type="number" id="orderDealerId" min="1" placeholder="Dealer ID (Admin)"
+                                class="w-full p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 outline-none">
+                        </div>
+
+                        <button onclick="createOrder()"
+                            class="bg-primary text-white font-bold rounded-lg px-4 py-2.5 hover:bg-indigo-700 transition">Create
+                            Order</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
+                                <tr>
+                                    <th class="px-6 py-4">ID</th>
+                                    <th class="px-6 py-4">Customer</th>
+                                    <th class="px-6 py-4">Dealer</th>
+                                    <th class="px-6 py-4">Date</th>
+                                    <th class="px-6 py-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersList" class="divide-y divide-gray-100">
+                                <tr>
+                                    <td colspan="5" class="p-6 text-center text-gray-400">Loading commands...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. APPOINTMENTS -->
+            <section id="view-appointments" class="hidden fade-in space-y-6">
+                <div class="flex justify-between items-end">
+                    <h2 class="text-2xl font-bold text-gray-800">Appointments</h2>
+                    <button onclick="fetchAppointments()"
+                        class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"><i
+                            class="fas fa-sync-alt mr-1"></i> Refresh</button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wide">Book Appointment</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+
+                        <!-- Admin Only Input -->
+                        <div id="apptDealerIdContainer" class="hidden lg:col-span-1">
+                            <input type="number" id="apptDealerId" min="1" placeholder="Dealer ID"
+                                class="w-full p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg text-sm outline-none">
+                        </div>
+
+                        <div class="lg:col-span-1">
+                            <input type="text" id="apptCustomer" placeholder="Customer Name"
+                                class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none">
+                        </div>
+                        <div class="lg:col-span-1">
+                            <select id="apptType"
+                                class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none">
+                                <option value="Eye Exam">Eye Exam</option>
+                                <option value="Styling">Styling Session</option>
+                                <option value="Adjustment">Adjustment</option>
+                            </select>
+                        </div>
+                        <div class="lg:col-span-1">
+                            <input type="datetime-local" id="apptDate"
+                                class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none">
+                        </div>
+                        <div class="lg:col-span-1">
+                            <button onclick="createAppointment()"
+                                class="w-full bg-blue-600 text-white font-bold rounded-lg px-4 py-2.5 hover:bg-blue-700 transition">Book</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
+                                <tr>
+                                    <th class="px-6 py-4">Customer</th>
+                                    <th class="px-6 py-4">Service</th>
+                                    <th class="px-6 py-4">Date & Time</th>
+                                    <th class="px-6 py-4">Dealer</th>
+                                    <th class="px-6 py-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointmentsList" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. FILES -->
+            <section id="view-files" class="hidden fade-in space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800">File Manager (R2 Storage)</h2>
+
+                <div class="bg-white p-10 rounded-xl border-2 border-dashed border-indigo-200 hover:border-primary transition cursor-pointer flex flex-col items-center justify-center text-center group"
+                    onclick="document.getElementById('fileInput').click()"
+                    ondragover="event.preventDefault(); this.classList.add('border-primary', 'bg-indigo-50')"
+                    ondragleave="this.classList.remove('border-primary', 'bg-indigo-50')" ondrop="handleDrop(event)">
+                    <input type="file" id="fileInput" class="hidden" onchange="handleFileSelect(this)">
+                    <div
+                        class="w-16 h-16 bg-indigo-50 text-indigo-400 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-700">Click to upload or drag and drop</h3>
+                    <p class="text-gray-400 text-sm mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
+                </div>
+
+                <!-- Upload Status -->
+                <div id="uploadStatusArea"
+                    class="hidden bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center border text-gray-400">
+                        <i class="fas fa-file"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p id="statusFileName" class="font-bold text-sm text-gray-800">filename.png</p>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                            <div id="uploadProgressBar"
+                                class="bg-green-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                    <button id="uploadActionBtn" onclick="uploadFile()"
+                        class="bg-primary text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700">Upload</button>
+                </div>
+
+                <!-- Result -->
+                <div id="fileResult" class="hidden bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p class="text-xs font-bold text-green-700 uppercase mb-1">Upload Successful</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="uploadedUrl" readonly
+                            class="flex-1 bg-white border border-green-200 p-2 rounded text-xs text-gray-600 font-mono select-all">
+                        <a id="viewFileBtn" href="#" target="_blank"
+                            class="bg-white border border-green-300 text-green-700 px-3 py-2 rounded text-xs font-bold hover:bg-green-100">View</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. ANALYTICS -->
+            <section id="view-analytics" class="hidden fade-in space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800">Analytics</h2>
+                <div class="bg-white p-12 rounded-xl border border-gray-200 text-center">
+                    <i class="fas fa-chart-line text-6xl text-gray-200 mb-6"></i>
+                    <h3 class="text-xl font-bold text-gray-700">Google Analytics 4 Integration</h3>
+                    <p class="text-gray-500 mt-2 max-w-md mx-auto">Analytics data is currently viewable directly in the
+                        GA4 Dashboard. API integration coming in v5.0.</p>
+                </div>
+            </section>
+
+            <!-- 6. STAFF (Admin) -->
+            <section id="view-staff" class="hidden fade-in space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800">Staff Management</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wide">Add New Team Member</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="staffName" placeholder="Full Name"
+                                class="p-3 border rounded-lg text-sm w-full outline-none focus:border-primary">
+                            <input type="email" id="staffEmail" placeholder="Email Address"
+                                class="p-3 border rounded-lg text-sm w-full outline-none focus:border-primary">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="staffPassword" placeholder="Default Password"
+                                class="p-3 border rounded-lg text-sm w-full outline-none focus:border-primary">
+                            <div id="staffDealerIdContainer" class="hidden">
+                                <input type="number" id="staffDealerId" placeholder="Dealer ID (Admin)"
+                                    class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm w-full outline-none focus:border-yellow-400">
+                            </div>
+                        </div>
+                        <button onclick="createStaff()"
+                            class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition">
+                            Create User
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. DEALERS (Producer Admin) -->
+            <section id="view-dealers" class="hidden fade-in space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800">Dealer Management</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+                    <div class="flex gap-4">
+                        <input type="text" id="newDealerName" placeholder="New Dealer Name (e.g. City Optic)"
+                            class="flex-1 p-3 border rounded-lg text-sm outline-none focus:border-primary">
+                        <button onclick="createDealer()"
+                            class="bg-gray-800 text-white font-bold px-6 rounded-lg hover:bg-gray-700">Add
+                            Dealer</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div
+                        class="p-4 bg-gray-50 border-b border-gray-200 font-bold text-gray-600 text-xs uppercase tracking-wider">
+                        Registered Dealers</div>
+                    <div id="dealersList" class="divide-y divide-gray-100">
+                        <div class="p-6 text-center text-gray-400">Loading...</div>
+                    </div>
+                </div>
+            </section>
 
         </div>
+    </main>
 
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast"
+        class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-x-[150%] max-w-sm w-full">
+        <div class="bg-white border-l-4 border-green-500 shadow-xl rounded-r-lg p-4 flex items-start gap-3">
+            <i id="toastIcon" class="fas fa-check-circle text-green-500 text-xl mt-0.5"></i>
+            <div>
+                <h4 id="toastTitle" class="font-bold text-sm text-gray-800">Success</h4>
+                <p id="toastMessage" class="text-sm text-gray-600 mt-1">Operation completed successfully.</p>
+            </div>
+        </div>
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
+        // --- CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1RwLRq0d4QpbkKjtcC7G0ekcO7KVXO8E",
+            authDomain: "proje-id.firebaseapp.com",
+            projectId: "proje-id",
+            storageBucket: "proje-id.firebasestorage.app",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
         const API_URL = 'http://localhost:3000/api/v1';
-        let authToken = localStorage.getItem('token');
-        let currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-        // On page load
-        if (authToken) {
-            showDashboard();
-        }
+        // Initialize Firebase
+        try { firebase.initializeApp(firebaseConfig); } catch (e) { }
+        const auth = firebase.auth ? firebase.auth() : null;
 
-        // --- LOGIN PROCESS ---
-        async function login() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        // State
+        let token = localStorage.getItem('token');
+        let user = JSON.parse(localStorage.getItem('user') || 'null');
+        let activeTab = 'home';
+        let dealerMap = {};
+
+        // --- INIT ---
+        window.onload = () => {
+            if (token && user) {
+                showDashboard();
+            } else {
+                document.getElementById('loginModal').classList.remove('hidden');
+            }
+        };
+
+        // --- AUTH ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('loginBtn');
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+            btn.disabled = true;
 
             try {
-                const res = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
+                if (!auth) throw new Error("Firebase SDK not loaded.");
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                token = await userCredential.user.getIdToken();
 
-                const data = await res.json();
+                // Determine Role & DealerID (Simulation typically, consistent with reused logic)
+                let role = 'dealer_user';
+                let dealerId = 101;
 
-                if (res.ok) {
-                    authToken = data.token;
-                    // On successful login we store the user data
-                    currentUser = { id: data.userId, role: data.role, dealerId: data.dealerId };
-                    
-                    localStorage.setItem('token', authToken);
-                    localStorage.setItem('user', JSON.stringify(currentUser));
-                    
-                    showNotification('Login Successful!', 'success');
-                    showDashboard();
-                } else {
-                    showNotification(data.message || 'Login Failed', 'error');
-                }
+                if (email.includes('admin')) role = 'producer_admin';
+                else if (email.includes('yonetici') || email.includes('ahmet') || email.includes('guney')) role = 'dealer_admin';
+
+                user = {
+                    email: userCredential.user.email,
+                    name: userCredential.user.displayName || 'User',
+                    role: role,
+                    dealerId: dealerId
+                };
+
+                localStorage.setItem('token', token);
+                localStorage.setItem('user', JSON.stringify(user));
+
+                showToast('Welcome', 'Login successful!');
+                showDashboard();
             } catch (err) {
-                showNotification('Server Error', 'error');
+                showToast('Login Failed', err.message, 'error');
+            } finally {
+                btn.innerHTML = 'Sign In';
+                btn.disabled = false;
             }
         }
 
-        // --- LOGOUT PROCESS ---
         function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            authToken = null;
-            currentUser = {};
-            
-            document.getElementById('dashboardScreen').classList.add('hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('userStatus').innerText = 'Guest';
-            document.getElementById('apiResult').classList.add('hidden');
+            if (auth) auth.signOut();
+            localStorage.clear();
+            location.reload();
         }
 
-        // --- CREATE ORDER ---
-        async function createOrder() {
-            const customerName = document.getElementById('customerName').value;
-            const frameModel = document.getElementById('frameModel').value;
-            const dealerIdInput = document.getElementById('dealerIdInput').value;
+        function showDashboard() {
+            document.getElementById('loginModal').classList.add('hidden');
 
-            // Logic:
-            // 1. If admin, use the ID entered in the input.
-            // 2. If dealer, use their own ID (currentUser.dealerId).
-            let targetDealerId;
+            // Sidebar UI Info
+            document.getElementById('sidebarUserName').innerText = user.name || user.email;
+            document.getElementById('sidebarUserRole').innerText = user.role.replace('_', ' ').toUpperCase();
 
-            if (currentUser.role === 'producer_admin') {
-                targetDealerId = dealerIdInput ? parseInt(dealerIdInput) : null;
-                if (!targetDealerId) {
-                    showNotification('Please enter a Dealer ID (Admin)', 'error');
+            // Role Based UI Visibility
+            updateUIForRole();
+
+            // Initial Data Fetch
+            fetchDealers().then(() => {
+                fetchOrders();
+                fetchAppointments();
+            });
+        }
+
+        function updateUIForRole() {
+            const isProducer = user.role === 'producer_admin';
+            const isDealerAdmin = user.role === 'dealer_admin';
+
+            // 1. Sidebar Links
+            const adminMenu = document.getElementById('admin-menu');
+            const dealersLink = document.getElementById('nav-dealers');
+
+            if (isProducer || isDealerAdmin) {
+                adminMenu.classList.remove('hidden');
+            }
+            if (isProducer) {
+                dealersLink.classList.remove('hidden');
+            }
+
+            // 2. Input Fields for Dealer ID (Producer only)
+            const dealerInputs = ['orderDealerIdContainer', 'apptDealerIdContainer', 'staffDealerIdContainer'];
+            dealerInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (isProducer) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- NAVIGATION ---
+        function switchTab(tab) {
+            // content
+            document.querySelectorAll('section[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+
+            // active link state
+            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+            const navBtn = document.getElementById(`nav-${tab}`);
+            if (navBtn) navBtn.classList.add('active');
+
+            activeTab = tab;
+
+            if (tab === 'orders') fetchOrders();
+            if (tab === 'appointments') fetchAppointments();
+            if (tab === 'dealers') fetchDealersList();
+
+            // Mobile: close sidebar on selection
+            document.getElementById('sidebar').classList.add('hidden');
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        }
+
+        // --- DATA FETCHING & LOGIC ---
+
+        // 1. ORDERS
+        async function fetchOrders() {
+            const list = document.getElementById('ordersList');
+            const stat = document.getElementById('statOrders');
+            list.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-400">Loading orders...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_URL}/orders`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const json = await res.json();
+                const data = json.data || [];
+
+                stat.innerText = data.length;
+
+                if (data.length === 0) {
+                    list.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-400">No orders found.</td></tr>';
                     return;
                 }
-            } else {
-                targetDealerId = currentUser.dealerId;
+
+                list.innerHTML = data.map(o => `
+                    <tr class="hover:bg-gray-50 border-b border-gray-50 last:border-0 transition">
+                        <td class="px-6 py-4 font-mono text-xs text-gray-500">#${o.id}</td>
+                        <td class="px-6 py-4 font-bold text-gray-700">${o.customerName}</td>
+                        <td class="px-6 py-4 text-xs text-gray-500">${getDealerName(o.dealerId)}</td>
+                        <td class="px-6 py-4 text-xs text-gray-500">${new Date(o.createdAt).toLocaleDateString()}</td>
+                        <td class="px-6 py-4">
+                            <select onchange="updateOrderStatus('${o.id}', this.value)" 
+                                class="text-xs border border-gray-200 rounded p-1.5 focus:border-primary outline-none cursor-pointer ${getStatusColor(o.status)}">
+                                <option value="Pending" ${o.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="In Production" ${o.status === 'In Production' ? 'selected' : ''}>In Production</option>
+                                <option value="Shipped" ${o.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
+                                <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                            </select>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { list.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-500">Error loading data</td></tr>'; }
+        }
+
+        async function createOrder() {
+            const customer = document.getElementById('orderCustomer').value;
+            const model = document.getElementById('orderModel').value;
+            let dealerId = user.dealerId;
+
+            if (user.role === 'producer_admin') {
+                const inputVal = document.getElementById('orderDealerId').value;
+                if (inputVal) dealerId = inputVal;
             }
 
-            const payload = {
-                dealerId: targetDealerId,
-                customerName: customerName,
-                configuration: { model: frameModel, price: 1500 }
-            };
+            if (!customer) return showToast('Error', 'Customer name required', 'error');
 
             try {
                 const res = await fetch(`${API_URL}/orders`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({
+                        dealerId: String(dealerId),
+                        customerName: customer,
+                        configuration: { model: model }
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('Success', 'Order created successfully');
+                    document.getElementById('orderCustomer').value = '';
+                    fetchOrders();
+                } else {
+                    const err = await res.json();
+                    showToast('Error', err.message || 'Failed', 'error');
+                }
+            } catch (e) { showToast('Error', 'Server Error', 'error'); }
+        }
+
+        async function updateOrderStatus(id, newStatus) {
+            // Optimistic update handled by UI, but we send request
+            try {
+                const res = await fetch(`${API_URL}/orders/${id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (res.ok) showToast('Success', 'Order status updated');
+                else showToast('Error', 'Failed to update status', 'error');
+            } catch (e) { showToast('Error', 'Network Error', 'error'); }
+        }
+
+        function getStatusColor(status) {
+            if (status === 'Shipped' || status === 'Delivered') return 'text-green-600 bg-green-50';
+            if (status === 'In Production') return 'text-blue-600 bg-blue-50';
+            return 'text-yellow-600 bg-yellow-50';
+        }
+
+        // 2. APPOINTMENTS
+        async function fetchAppointments() {
+            const list = document.getElementById('appointmentsList');
+            const stat = document.getElementById('statAppts');
+            list.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-400">Loading appointments...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_URL}/appointments`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const json = await res.json();
+                const data = json.data || [];
+
+                stat.innerText = data.length;
+
+                if (data.length === 0) {
+                    list.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-400">No appointments found.</td></tr>';
+                    return;
+                }
+
+                list.innerHTML = data.map(a => `
+                    <tr class="hover:bg-gray-50 border-b border-gray-50 last:border-0 transition">
+                        <td class="px-6 py-4 font-bold text-gray-700">${a.customerName}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">${a.type}</td>
+                        <td class="px-6 py-4 text-xs font-mono text-primary">${new Date(a.appointmentDate).toLocaleString()}</td>
+                        <td class="px-6 py-4 text-xs text-gray-500">${getDealerName(a.dealerId)}</td>
+                        <td class="px-6 py-4">
+                            <select onchange="updateApptStatus('${a.id}', this.value)" 
+                                class="text-xs border border-gray-200 rounded p-1.5 focus:border-primary outline-none cursor-pointer">
+                                <option value="Scheduled" ${a.status === 'Scheduled' ? 'selected' : ''}>Scheduled</option>
+                                <option value="Completed" ${a.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                <option value="Cancelled" ${a.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                            </select>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { list.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-500">Error loading data</td></tr>'; }
+        }
+
+        async function createAppointment() {
+            const customer = document.getElementById('apptCustomer').value;
+            const date = document.getElementById('apptDate').value;
+            const type = document.getElementById('apptType').value;
+            let dealerId = user.dealerId;
+
+            if (user.role === 'producer_admin') {
+                const dInput = document.getElementById('apptDealerId').value;
+                if (dInput) dealerId = dInput;
+            }
+
+            if (!customer || !date) return showToast('Error', 'Missing required fields', 'error');
+
+            try {
+                const res = await fetch(`${API_URL}/appointments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({
+                        dealerId: String(dealerId),
+                        customerName: customer,
+                        appointmentDate: new Date(date).toISOString(),
+                        type: type,
+                        notes: 'Created via Dashboard'
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('Success', 'Appointment booked');
+                    document.getElementById('apptCustomer').value = '';
+                    fetchAppointments();
+                } else {
+                    const err = await res.json();
+                    showToast('Error', err.message, 'error');
+                }
+            } catch (e) { showToast('Error', 'Server Error', 'error'); }
+        }
+
+        async function updateApptStatus(id, newStatus) {
+            try {
+                await fetch(`${API_URL}/appointments/${id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                showToast('Success', 'Status updated');
+            } catch (e) { showToast('Error', 'Network Error', 'error'); }
+        }
+
+        // 3. STAFF
+        async function createStaff() {
+            const name = document.getElementById('staffName').value;
+            const email = document.getElementById('staffEmail').value;
+            const password = document.getElementById('staffPassword').value;
+
+            if (!name || !email || !password) {
+                return showToast('Error', 'Name, Email, and Password are required.', 'error');
+            }
+
+            let payload = {
+                name,
+                email,
+                password
+            };
+
+            // Logic:
+            // 1. Dealer Admin -> Creates 'dealer_user' for their own Dealer ID.
+            // 2. Producer Admin -> Creates 'dealer_admin' for a specific Dealer ID (from input).
+            if (user.role === 'dealer_admin') {
+                payload.role = 'dealer_user';
+                payload.dealerId = String(user.dealerId);
+            } else if (user.role === 'producer_admin') {
+                payload.role = 'dealer_admin'; // Admin creates other admins
+                const inputId = document.getElementById('staffDealerId').value;
+                if (inputId) {
+                    payload.dealerId = String(inputId);
+                } else {
+                    return showToast('Error', 'Dealer ID is required for Producer Admin.', 'error');
+                }
+            } else {
+                return showToast('Error', 'Unauthorized action.', 'error');
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/auth/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
-                
-                if(res.ok) {
-                    showNotification('Order received! ID: ' + data.data.id, 'success');
+
+                if (res.ok) {
+                    showToast('Success', `User (${payload.role}) created successfully!`);
+                    document.getElementById('staffName').value = '';
+                    document.getElementById('staffEmail').value = '';
+                    document.getElementById('staffPassword').value = '';
+                    if (document.getElementById('staffDealerId')) document.getElementById('staffDealerId').value = '';
                 } else {
-                    showNotification(data.message, 'error');
+                    const err = await res.json();
+                    showToast('Error', err.message || 'Failed to create user.', 'error');
                 }
-            } catch (err) {
-                showNotification('An error occurred', 'error');
+            } catch (e) {
+                showToast('Error', 'Server connection failed.', 'error');
             }
         }
 
-        // --- DATA FETCH (GET) ---
-        async function getOrders() {
-            callApi('/orders');
-        }
-
-        async function getStats() {
-            // If admin, take from input or default to 3 (for testing)
-            const inputId = document.getElementById('dealerIdInput').value;
-            const targetId = currentUser.dealerId || inputId || 3;
-            
-            const statsUrl = `http://localhost:3000/l/stats/${targetId}`;
-            
+        // 4. DEALERS
+        async function fetchDealersList() {
+            const list = document.getElementById('dealersList');
             try {
-                const res = await fetch(statsUrl, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-                const data = await res.json();
-                showResult(data);
-            } catch(err) {
-                showResult({ error: "Failed to fetch statistics" });
-            }
+                const res = await fetch(`${API_URL}/dealers`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const json = await res.json();
+                if (json.data) {
+                    list.innerHTML = json.data.map(d => `
+                        <div class="p-4 flex justify-between items-center hover:bg-gray-50">
+                            <div>
+                                <p class="font-bold text-gray-800">${d.name}</p>
+                                <p class="text-xs text-gray-400">ID: ${d.id}</p>
+                            </div>
+                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Active</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) { }
         }
 
-        async function callApi(endpoint) {
+        async function createDealer() {
+            const name = document.getElementById('newDealerName').value;
+            if (!name) return;
             try {
-                const res = await fetch(`${API_URL}${endpoint}`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                const res = await fetch(`${API_URL}/dealers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ name })
                 });
-                const data = await res.json();
-                showResult(data);
-            } catch (err) {
-                showResult({ error: 'Request failed' });
+                if (res.ok) {
+                    showToast('Success', 'Dealer added');
+                    document.getElementById('newDealerName').value = '';
+                    fetchDealersList();
+                }
+            } catch (e) { showToast('Error', 'Failed', 'error'); }
+        }
+
+        // 5. FILES
+        let selectedFile = null;
+
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                processFile(input.files[0]);
             }
         }
 
-        function showDashboard() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('dashboardScreen').classList.remove('hidden');
-            
-            document.getElementById('userNameDisplay').innerText = currentUser.role === 'producer_admin' ? 'Producer Admin' : 'Dealer Manager';
-            document.getElementById('userRoleDisplay').innerText = currentUser.role;
-            document.getElementById('userStatus').innerText = 'Online';
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-primary', 'bg-indigo-50');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                processFile(e.dataTransfer.files[0]);
+            }
+        }
 
-            // --- NEW: show Dealer ID box if admin ---
-            const dealerIdContainer = document.getElementById('dealerIdContainer');
-            if (currentUser.role === 'producer_admin') {
-                dealerIdContainer.classList.remove('hidden');
+        function processFile(file) {
+            selectedFile = file;
+            document.getElementById('uploadStatusArea').classList.remove('hidden');
+            document.getElementById('statusFileName').innerText = file.name;
+            document.getElementById('uploadProgressBar').style.width = '0%';
+            document.getElementById('uploadActionBtn').disabled = false;
+            document.getElementById('uploadActionBtn').innerText = 'Upload';
+            document.getElementById('fileResult').classList.add('hidden');
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) return;
+
+            const btn = document.getElementById('uploadActionBtn');
+            const bar = document.getElementById('uploadProgressBar');
+
+            btn.disabled = true;
+            btn.innerText = 'Uploading...';
+            bar.style.width = '50%'; // Simulation start
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const res = await fetch(`${API_URL}/storage/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const json = await res.json();
+                    const url = json.data?.publicUrl || json.url || 'http://example.com/file.png';
+
+                    bar.style.width = '100%';
+                    showToast('Success', 'File uploaded!');
+
+                    document.getElementById('fileResult').classList.remove('hidden');
+                    document.getElementById('uploadedUrl').value = url;
+                    document.getElementById('viewFileBtn').href = url;
+                    btn.innerText = 'Done';
+                } else {
+                    showToast('Error', 'Upload failed', 'error');
+                    bar.style.width = '0%';
+                    btn.innerText = 'Retry';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                showToast('Error', 'Network Error', 'error');
+                btn.disabled = false;
+            }
+        }
+
+        // --- HELPERS ---
+        async function fetchDealers() {
+            try {
+                const res = await fetch(`${API_URL}/dealers`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const json = await res.json();
+                if (json.data) {
+                    json.data.forEach(d => dealerMap[String(d.id)] = d.name);
+                }
+            } catch (e) { }
+        }
+        function getDealerName(id) { return dealerMap[String(id)] || `Dealer #${id}`; }
+
+        function showToast(title, msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').innerText = title;
+            document.getElementById('toastMessage').innerText = msg;
+
+            const icon = document.getElementById('toastIcon');
+            const container = toast.children[0];
+
+            if (type === 'error') {
+                container.classList.replace('border-green-500', 'border-red-500');
+                icon.className = 'fas fa-exclamation-circle text-red-500 text-xl mt-0.5';
             } else {
-                dealerIdContainer.classList.add('hidden');
+                container.classList.replace('border-red-500', 'border-green-500');
+                icon.className = 'fas fa-check-circle text-green-500 text-xl mt-0.5';
             }
-        }
 
-        function showResult(data) {
-            const el = document.getElementById('apiResult');
-            el.classList.remove('hidden');
-            el.innerText = JSON.stringify(data, null, 2);
-        }
-
-        function showNotification(msg, type) {
-            const el = document.getElementById('notification');
-            el.innerText = msg;
-            el.className = `p-3 text-sm text-center font-bold ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 3000);
+            toast.classList.remove('translate-x-[150%]');
+            setTimeout(() => {
+                toast.classList.add('translate-x-[150%]');
+            }, 3500);
         }
     </script>
 </body>
+
 </html>

@@ -1,18 +1,18 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Eyewear Dealer Management API (MVB)",
-    "version": "1.2.0",
-    "description": "Backend API documentation for dealer management, order tracking, multi-tenant user management, appointments, and security features."
+    "title": "Gözlük Bayi Yönetimi API (MVB)",
+    "version": "1.3.0",
+    "description": "Bayi yönetimi, sipariş takibi, çok kiracılı kullanıcı yönetimi ve dosya depolama (Storage) işlemleri için backend API dökümantasyonu."
   },
   "servers": [
     {
       "url": "http://localhost:3000/api/v1",
-      "description": "API Server"
+      "description": "API Sunucusu"
     },
     {
       "url": "http://localhost:3000/l",
-      "description": "Short Link Server"
+      "description": "Kısa Link Sunucusu"
     }
   ],
   "components": {
@@ -27,59 +27,152 @@
       "Dealer": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "name": { "type": "string" },
-          "currentLinkHash": { "type": "string" },
-          "isActive": { "type": "boolean" },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "updatedAt": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currentLinkHash": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "User": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "email": { "type": "string" },
-          "name": { "type": "string" },
-          "role": { 
-            "type": "string", 
-            "enum": ["producer_admin", "dealer_admin", "dealer_user"] 
+          "id": {
+            "type": "integer"
           },
-          "dealerId": { "type": "integer", "nullable": true },
-          "dealerLimit": { "type": "integer", "nullable": true, "description": "Max dealers allowed (Producer only)" }
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "producer_admin",
+              "dealer_admin",
+              "dealer_user"
+            ]
+          },
+          "dealerId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "dealerLimit": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Maksimum bayi sayısı (Sadece Üretici)"
+          }
         }
       },
       "Order": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "dealerId": { "type": "integer" },
-          "customerName": { "type": "string" },
-          "status": { "type": "string", "enum": ["Pending", "In Production", "Shipped"] },
-          "configuration": { "type": "object" },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "integer"
+          },
+          "dealerId": {
+            "type": "integer"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Pending",
+              "In Production",
+              "Shipped"
+            ]
+          },
+          "configuration": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Appointment": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "dealerId": { "type": "integer" },
-          "customerName": { "type": "string" },
-          "appointmentDate": { "type": "string", "format": "date-time" },
-          "type": { "type": "string", "enum": ["Eye Exam", "Styling", "Adjustment", "Other"] },
-          "status": { "type": "string", "enum": ["Scheduled", "Completed", "Cancelled", "No Show"] },
-          "notes": { "type": "string" },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "integer"
+          },
+          "dealerId": {
+            "type": "integer"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "appointmentDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Eye Exam",
+              "Styling",
+              "Adjustment",
+              "Other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Scheduled",
+              "Completed",
+              "Cancelled",
+              "No Show"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "ChangePassword": {
         "type": "object",
-        "required": ["currentPassword", "newPassword", "confirmPassword"],
+        "required": [
+          "currentPassword",
+          "newPassword",
+          "confirmPassword"
+        ],
         "properties": {
-          "currentPassword": { "type": "string", "format": "password" },
-          "newPassword": { "type": "string", "format": "password", "minLength": 6 },
-          "confirmPassword": { "type": "string", "format": "password" }
+          "currentPassword": {
+            "type": "string",
+            "format": "password"
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password",
+            "minLength": 6
+          },
+          "confirmPassword": {
+            "type": "string",
+            "format": "password"
+          }
         }
       }
     }
@@ -87,8 +180,10 @@
   "paths": {
     "/auth/login": {
       "post": {
-        "tags": ["Auth"],
-        "summary": "Log in to the system and obtain a Token",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sisteme giriş yap ve Token al",
         "requestBody": {
           "required": true,
           "content": {
@@ -96,33 +191,53 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "email": { "type": "string", "default": "admin@uretici.com" },
-                  "password": { "type": "string", "default": "admin-sifresi" }
+                  "email": {
+                    "type": "string",
+                    "default": "admin@uretici.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "default": "admin-sifresi"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Login successful, token returned." },
-          "401": { "description": "Invalid email or password." }
+          "200": {
+            "description": "Giriş başarılı, token döner."
+          },
+          "401": {
+            "description": "Hatalı e-posta veya şifre."
+          }
         }
       }
     },
     "/auth/logout": {
       "post": {
-        "tags": ["Auth"],
-        "summary": "Log out (Invalidate Token)",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Çıkış yap (Token geçersiz kılma)",
         "responses": {
-          "200": { "description": "Logout successful." }
+          "200": {
+            "description": "Çıkış başarılı."
+          }
         }
       }
     },
     "/auth/change-password": {
       "post": {
-        "tags": ["Auth"],
-        "summary": "Change current user's password",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Şifre değiştir",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -134,37 +249,66 @@
           }
         },
         "responses": {
-          "200": { "description": "Password updated successfully." },
-          "400": { "description": "Validation error (mismatch or weak password)." },
-          "401": { "description": "Unauthorized." }
+          "200": {
+            "description": "Şifre başarıyla güncellendi."
+          },
+          "400": {
+            "description": "Validasyon hatası (Eşleşmeme veya zayıf şifre)."
+          },
+          "401": {
+            "description": "Yetkisiz erişim."
+          }
         }
       }
     },
     "/auth/users": {
       "post": {
-        "tags": ["Auth"],
-        "summary": "Create a new user (Multi-Tenant)",
-        "description": "Producer can add a new Dealer Admin. Dealer Admin can add their own staff.",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Yeni kullanıcı oluştur (Multi-Tenant)",
+        "description": "Üretici yeni bir Bayi Yöneticisi ekleyebilir. Bayi Yöneticisi kendi personellerini ekleyebilir.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "password", "name", "role"],
+                "required": [
+                  "email",
+                  "password",
+                  "name",
+                  "role"
+                ],
                 "properties": {
-                  "email": { "type": "string", "example": "ahmet@merkezoptik.com" },
-                  "password": { "type": "string", "example": "strong-password" },
-                  "name": { "type": "string", "example": "Ahmet Yilmaz" },
-                  "role": { 
-                    "type": "string", 
-                    "enum": ["dealer_admin", "dealer_user"],
+                  "email": {
+                    "type": "string",
+                    "example": "ahmet@merkezoptik.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "guclu-sifre"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Ahmet Yilmaz"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "dealer_admin",
+                      "dealer_user"
+                    ],
                     "example": "dealer_admin"
                   },
-                  "dealerId": { 
-                    "type": "integer", 
-                    "description": "Required only if Producer is adding. Automatically assigned when Dealer Admin adds.",
+                  "dealerId": {
+                    "type": "integer",
+                    "description": "Sadece Üretici ekliyorsa gereklidir. Bayi yöneticisi eklerken otomatik atanır.",
                     "example": 101
                   }
                 }
@@ -173,86 +317,141 @@
           }
         },
         "responses": {
-          "201": { "description": "User created successfully." },
-          "403": { "description": "You do not have permission to perform this action." }
+          "201": {
+            "description": "Kullanıcı başarıyla oluşturuldu."
+          },
+          "403": {
+            "description": "Bu işlem için yetkiniz yok."
+          }
         }
       }
     },
     "/dealers": {
       "get": {
-        "tags": ["Dealers"],
-        "summary": "List all dealers",
+        "tags": [
+          "Dealers"
+        ],
+        "summary": "Tüm bayileri listele",
         "responses": {
-          "200": { "description": "List of dealers." }
+          "200": {
+            "description": "Bayi listesi."
+          }
         }
       },
       "post": {
-        "tags": ["Dealers"],
-        "summary": "Create a new dealer",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Dealers"
+        ],
+        "summary": "Yeni bayi oluştur",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "properties": {
-                  "name": { "type": "string" }
+                  "name": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Dealer created successfully." },
-          "401": { "description": "Unauthorized access." }
+          "201": {
+            "description": "Bayi oluşturuldu."
+          },
+          "401": {
+            "description": "Yetkisiz erişim."
+          }
         }
       }
     },
     "/orders": {
       "get": {
-        "tags": ["Orders"],
-        "summary": "List all orders",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Tüm siparişleri listele",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "List of orders." }
+          "200": {
+            "description": "Sipariş listesi."
+          }
         }
       },
       "post": {
-        "tags": ["Orders"],
-        "summary": "Create a new order (from Configurator)",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Yeni sipariş oluştur (Konfigüratörden)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["dealerId", "configuration"],
+                "required": [
+                  "dealerId",
+                  "configuration"
+                ],
                 "properties": {
-                  "dealerId": { "type": "integer" },
-                  "customerName": { "type": "string" },
-                  "configuration": { "type": "object" }
+                  "dealerId": {
+                    "type": "integer"
+                  },
+                  "customerName": {
+                    "type": "string"
+                  },
+                  "configuration": {
+                    "type": "object"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Order created successfully." }
+          "201": {
+            "description": "Sipariş oluşturuldu."
+          }
         }
       }
     },
     "/orders/{id}/status": {
       "patch": {
-        "tags": ["Orders"],
-        "summary": "Update order status",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Sipariş durumunu güncelle",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {
@@ -260,65 +459,117 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["status"],
+                "required": [
+                  "status"
+                ],
                 "properties": {
-                  "status": { "type": "string", "example": "In Production" }
+                  "status": {
+                    "type": "string",
+                    "example": "In Production"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Status updated successfully." }
+          "200": {
+            "description": "Durum güncellendi."
+          }
         }
       }
     },
     "/appointments": {
       "get": {
-        "tags": ["Appointments"],
-        "summary": "List all appointments",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Appointments"
+        ],
+        "summary": "Tüm randevuları listele",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "List of appointments." }
+          "200": {
+            "description": "Randevu listesi."
+          }
         }
       },
       "post": {
-        "tags": ["Appointments"],
-        "summary": "Create a new appointment",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Appointments"
+        ],
+        "summary": "Yeni randevu oluştur",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["dealerId", "customerName", "appointmentDate"],
+                "required": [
+                  "dealerId",
+                  "customerName",
+                  "appointmentDate"
+                ],
                 "properties": {
-                  "dealerId": { "type": "integer" },
-                  "customerName": { "type": "string" },
-                  "appointmentDate": { "type": "string", "format": "date-time" },
-                  "type": { "type": "string", "enum": ["Eye Exam", "Styling", "Adjustment", "Other"] },
-                  "notes": { "type": "string" }
+                  "dealerId": {
+                    "type": "integer"
+                  },
+                  "customerName": {
+                    "type": "string"
+                  },
+                  "appointmentDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Eye Exam",
+                      "Styling",
+                      "Adjustment",
+                      "Other"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Appointment created successfully." }
+          "201": {
+            "description": "Randevu başarıyla oluşturuldu."
+          }
         }
       }
     },
     "/appointments/{id}/status": {
       "patch": {
-        "tags": ["Appointments"],
-        "summary": "Update appointment status",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Appointments"
+        ],
+        "summary": "Randevu durumunu güncelle",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {
@@ -326,68 +577,220 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["status"],
+                "required": [
+                  "status"
+                ],
                 "properties": {
-                  "status": { "type": "string", "enum": ["Scheduled", "Completed", "Cancelled", "No Show"] }
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "Scheduled",
+                      "Completed",
+                      "Cancelled",
+                      "No Show"
+                    ]
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Status updated successfully." }
+          "200": {
+            "description": "Durum güncellendi."
+          }
+        }
+      }
+    },
+    "/storage/upload": {
+      "post": {
+        "tags": [
+          "Storage"
+        ],
+        "summary": "Dosya Yükle (Admin & Bayi Yönetici)",
+        "description": "Dosyayı Cloudflare R2'ye yükler ve public URL döner.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Dosya başarıyla yüklendi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "example": "https://pub-xxx.r2.dev/dealers/123.jpg"
+                        },
+                        "fileName": {
+                          "type": "string"
+                        },
+                        "size": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dosya seçilmedi."
+          },
+          "401": {
+            "description": "Yetkisiz erişim."
+          }
+        }
+      }
+    },
+    "/storage/delete": {
+      "delete": {
+        "tags": [
+          "Storage"
+        ],
+        "summary": "Dosya Sil",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "fileUrl"
+                ],
+                "properties": {
+                  "fileUrl": {
+                    "type": "string",
+                    "example": "https://pub-xxx.r2.dev/dealers/123.jpg"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dosya başarıyla silindi."
+          },
+          "401": {
+            "description": "Yetkisiz erişim."
+          }
         }
       }
     },
     "/stats/{dealerId}": {
       "get": {
-        "tags": ["Analytics"],
-        "summary": "Get dealer click statistics",
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Bayi tıklama istatistikleri",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "dealerId",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           },
           {
             "in": "query",
             "name": "startDate",
             "required": false,
-            "schema": { "type": "string", "format": "date" },
-            "description": "Start Date (YYYY-MM-DD)"
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Başlangıç Tarihi (YYYY-MM-DD)"
           },
           {
             "in": "query",
             "name": "endDate",
             "required": false,
-            "schema": { "type": "string", "format": "date" },
-            "description": "End Date (YYYY-MM-DD)"
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Bitiş Tarihi (YYYY-MM-DD)"
           }
         ],
         "responses": {
-          "200": { "description": "Statistics data retrieved." },
-          "401": { "description": "Unauthorized access (Token missing)." },
-          "403": { "description": "Forbidden (Accessing other dealer's data)." }
+          "200": {
+            "description": "İstatistik verisi."
+          },
+          "401": {
+            "description": "Yetkisiz erişim (Token eksik)."
+          },
+          "403": {
+            "description": "Yasak (Başkasının verisi)."
+          }
         }
       }
     },
     "/{linkHash}": {
       "get": {
-        "tags": ["Analytics"],
-        "summary": "(B2C) Link Tracking and Redirection",
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "(B2C) Link Takibi ve Yönlendirme",
         "parameters": [
           {
             "in": "path",
             "name": "linkHash",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "302": { "description": "Redirect to configurator page." },
-          "404": { "description": "Link not found." }
+          "302": {
+            "description": "Konfigüratör sayfasına yönlendirme."
+          },
+          "404": {
+            "description": "Link bulunamadı."
+          }
         }
       }
     }

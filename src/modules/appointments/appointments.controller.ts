@@ -3,7 +3,16 @@ import { CreateAppointmentDTO, Appointment, UpdateAppointmentStatusDTO } from '.
 import { AppError } from '../../shared/utils/AppError';
 import { appointmentRepository } from './appointments.repository';
 
-// GET /api/v1/appointments
+/**
+ * Retrieves a list of appointments.
+ * 
+ * If the user is a 'producer_admin', all appointments are returned.
+ * If the user is a 'dealer_admin' or 'dealer_user', only appointments associated with their dealer ID are returned.
+ * 
+ * @param req - The express request object containing user information.
+ * @param res - The express response object.
+ * @returns A JSON response containing the list of appointments.
+ */
 export const getAppointments = async (req: Request, res: Response) => {
     try {
         const user = req.user;
@@ -14,13 +23,13 @@ export const getAppointments = async (req: Request, res: Response) => {
 
         let appointments: Appointment[] = [];
 
-        // Producer Admin -> Fetch ALL
+        // Producer Admin: Fetch all appointments
         if (user.role === 'producer_admin') {
             appointments = await appointmentRepository.findAll();
         }
-        // Dealer Admin or Staff -> Fetch ONLY their Dealer's data
+        // Dealer Admin or Staff: Fetch appointments only for their specific Dealer
         else if (user.dealerId) {
-            appointments = await appointmentRepository.findByDealerId(Number(user.dealerId));
+            appointments = await appointmentRepository.findByDealerId(user.dealerId);
         }
 
         res.status(200).json({
@@ -34,12 +43,20 @@ export const getAppointments = async (req: Request, res: Response) => {
     }
 };
 
-// POST /api/v1/appointments
+/**
+ * Creates a new appointment.
+ * 
+ * Enforces security by ensuring dealer users can only create appointments for their own dealer.
+ * 
+ * @param req - The express request object containing the appointment details in the body.
+ * @param res - The express response object.
+ * @returns A JSON response containing the created appointment.
+ */
 export const createAppointment = async (req: Request, res: Response) => {
     let { dealerId, customerName, appointmentDate, type, notes } = req.body as CreateAppointmentDTO;
     const user = req.user;
 
-    // SECURITY: If user is a dealer, force their own dealerId
+    // Security: Enforce dealerId for Dealer Admin or User roles
     if (user && (user.role === 'dealer_admin' || user.role === 'dealer_user')) {
         if (user.dealerId) {
             dealerId = user.dealerId;
@@ -71,9 +88,15 @@ export const createAppointment = async (req: Request, res: Response) => {
     }
 };
 
-// PATCH /api/v1/appointments/:id/status
+/**
+ * Updates the status of an existing appointment.
+ * 
+ * @param req - The express request object containing the appointment ID in params and new status in the body.
+ * @param res - The express response object.
+ * @returns A JSON response confirming the status update.
+ */
 export const updateAppointmentStatus = async (req: Request, res: Response) => {
-    const id = Number(req.params.id);
+    const id = req.params.id;
     const { status } = req.body as UpdateAppointmentStatusDTO;
 
     if (!status) {

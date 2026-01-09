@@ -1,70 +1,61 @@
-import { Container } from "@azure/cosmos";
-import { getCosmosClient } from "../../shared/database/cosmosClient";
+import axios from 'axios';
 import { VisitLog } from "../../shared/models/VisitLog";
-import { cosmosConfig } from '../../config/dbConfig';
+// import { Container } from "@azure/cosmos"; // Closed Cosmos DB imports
+// import { getCosmosClient } from "../../shared/database/cosmosClient";
+// import { cosmosConfig } from '../../config/dbConfig';
+
+const GA4_ENDPOINT = `https://www.google-analytics.com/mp/collect`;
 
 export const analyticsRepository = {
-    container: null as Container | null,
+    // container: null as Container | null, // Cosmos DB cancelled
 
-    // lazily initialize and get the Cosmos DB container
-    async getContainer(): Promise<Container> {
-        if (!this.container) {
-            const client = getCosmosClient();
-            const database = client.database(cosmosConfig.databaseId);
-            this.container = database.container(cosmosConfig.containerId);
+    /**
+     * Sends a custom event to Google Analytics 4 via Measurement Protocol.
+     * This replaces the Cosmos DB 'createVisitLog' method.
+     * 
+     * @param {VisitLog} visitLog - The visit data to be sent as an event.
+     * @returns {Promise<void>}
+     */
+    async sendGA4Event(visitLog: VisitLog): Promise<void> {
+        const measurementId = process.env.GA4_MEASUREMENT_ID;
+        const apiSecret = process.env.GA4_API_SECRET;
+
+        // If keys are missing (Local Test), just log and exit
+        if (!measurementId || !apiSecret) {
+            console.warn("⚠️ [GA4]: Keys missing! Could not send to Google Analytics (Mock Mode).");
+            // Mock event details logging removed for cleanup
+            return;
         }
-        return this.container;
-    },
 
-    // saves a visit log to Cosmos DB
-    async createVisitLog(visitLog: VisitLog): Promise<void> {
         try {
-            const container = await this.getContainer();
-            
-            // ensure dealerId is stored as a number
-            const logToSave = { 
-                ...visitLog, 
-                dealerId: Number(visitLog.dealerId) 
-            };
-            
-            await container.items.create(logToSave);
-            
-            console.log(`[Cosmos DB]: Visit log successfully saved. Hash: ${visitLog.linkHash}, Dealer: ${logToSave.dealerId}`);
-        } catch (error) {
-            console.error("[Cosmos DB Error] Failed to save visit log:", error);
-        }
-    },
-
-    // retrieves visit logs for a dealer with optional date filtering
-    // date filters are expected in 'YYYY-MM-DD' format
-    async getVisitsByDealerId(dealerId: number, startDate?: string, endDate?: string): Promise<VisitLog[]> {
-        try {
-            const container = await this.getContainer();
-
-            let queryText = "SELECT * FROM c WHERE c.dealerId = @dealerId";
-            const parameters: any[] = [{ name: "@dealerId", value: Number(dealerId) }];
-
-            if (startDate) {
-                queryText += " AND c.timestamp >= @startDate";
-                parameters.push({ name: "@startDate", value: startDate });
-            }
-
-            if (endDate) {
-                queryText += " AND c.timestamp <= @endDate";
-                parameters.push({ name: "@endDate", value: endDate });
-            }
-
-            const querySpec = {
-                query: queryText,
-                parameters: parameters
+            // Google Analytics 4 Payload Format
+            const payload = {
+                client_id: visitLog.ip || 'anonymous_user', // IP or ID to distinguish the user
+                events: [{
+                    name: 'dealer_link_click', // Event Name
+                    params: {
+                        dealer_id: visitLog.dealerId,
+                        link_hash: visitLog.linkHash,
+                        user_agent: visitLog.userAgent,
+                        engagement_time_msec: 100 // Optional
+                    }
+                }]
             };
 
-            const { resources: items } = await container.items.query<VisitLog>(querySpec).fetchAll();
-            
-            return items;
+            // HTTP POST Request
+            await axios.post(`${GA4_ENDPOINT}?measurement_id=${measurementId}&api_secret=${apiSecret}`, payload);
+
+            console.log(`✅ [GA4]: Event successfully sent -> Hash: ${visitLog.linkHash}`);
         } catch (error) {
-            console.error("[Cosmos DB Error] Failed to fetch visit logs:", error);
-            return []; 
+            // Analytics error should not break the flow
+            console.error("❌ [GA4 Error]: Data could not be sent.", error);
         }
-    }
+    },
+
+    // --- OLD COSMOS DB CODES (Keep commented out) ---
+    /*
+    async getContainer(): Promise<Container> { ... }
+    async createVisitLog(visitLog: VisitLog): Promise<void> { ... }
+    async getVisitsByDealerId(dealerId: number): Promise<VisitLog[]> { ... }
+    */
 };

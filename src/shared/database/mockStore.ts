@@ -1,14 +1,14 @@
 import { Dealer } from "../models/Dealer";
-import { User } from "../models/User"; 
+import { User } from "../models/User";
 import { Order } from "../models/Order";
 
 const initialUsers: User[] = [
     {
         id: 1,
         email: "admin@uretici.com",
-        passwordHash: "sahte-hash-sifre", 
+        passwordHash: "sahte-hash-sifre",
         name: "Yönetici Kullanıcı",
-        role: "superuser",
+        role: "producer_admin",
         dealerLimit: 10,
         isActive: true,
         createdAt: new Date(),
@@ -42,24 +42,23 @@ const initialOrders: Order[] = [
         dealerId: 101,
         customerName: "Ata Arpat",
         status: "Pending",
-        configuration: { 
+        configuration: {
             frame: "Aviator",
             lensType: "BlueCut",
-            prescription: {left: -1.5, right: -1.0}
+            prescription: { left: -1.5, right: -1.0 }
         },
         createdAt: new Date(),
         updatedAt: new Date(),
-     }
+    }
 ];
 
 export const mockStore = {
     users: initialUsers,
     dealers: dealerDatabase,
-    
-    visitLogs: [] as any[], 
-    orders: initialOrders ,
+
+    visitLogs: [] as any[],
+    orders: initialOrders,
 
     revokedTokens: [] as string[],
 };
 
-console.log("Mock store initialized with sample data.");

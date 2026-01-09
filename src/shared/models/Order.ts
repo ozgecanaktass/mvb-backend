@@ -1,7 +1,7 @@
 // order data from configurator to be saved in the database
 export interface Order {
-    id: number;
-    dealerId: number;
+    id: number | string;
+    dealerId: number | string;
 
     status: 'Pending' | 'Confirmed' | 'In Production' | 'Shipped' | 'Cancelled';
 

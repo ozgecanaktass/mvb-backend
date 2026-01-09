@@ -1,139 +1,144 @@
-import sql from 'mssql';
-import { getNewConnection } from '../../shared/database/azureSql'; // Pool-less connection
-import { Appointment, CreateAppointmentDTO, UpdateAppointmentStatusDTO } from '../../shared/models/Appointment';
+import { firestore } from '../../config/firebase';
+import { Appointment, CreateAppointmentDTO } from '../../shared/models/Appointment';
 
 export const appointmentRepository = {
-    
+
     /**
-     * Retrieve all appointments (For Producer Admin).
+     * Retrieves all appointments.
+     * Intended for Producer Admins.
+     * 
+     * @returns A promise that resolves to an array of all appointments.
      */
     async findAll(): Promise<Appointment[]> {
-        const pool = await getNewConnection();
+        // Firebase Firestore Implementation
         try {
-            const result = await pool.request().query(`
-                SELECT 
-                    id, dealer_id as dealerId, customer_name as customerName,
-                    appointment_date as appointmentDate, type, status, notes,
-                    created_at as createdAt, updated_at as updatedAt
-                FROM appointments 
-                ORDER BY appointment_date DESC
-            `);
-            return result.recordset as Appointment[];
+            if (!firestore) throw new Error("Firebase not initialized");
+
+            const snapshot = await firestore.collection('appointments')
+                .orderBy('appointmentDate', 'desc')
+                .get();
+
+            return snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Convert Firestore Timestamp to Date
+                    appointmentDate: (data.appointmentDate as any).toDate(),
+                    createdAt: (data.createdAt as any).toDate(),
+                    updatedAt: (data.updatedAt as any).toDate()
+                } as unknown as Appointment;
+            });
         } catch (error) {
-            console.error('[SQL Error] Failed to fetch all appointments:', error);
+            console.error('[Firebase Error] Failed to fetch all appointments:', error);
             return [];
-        } finally {
-            pool.close();
         }
     },
 
     /**
-     * Retrieve appointments for a specific dealer (Data Isolation).
+     * Retrieves appointments for a specific dealer.
+     * Ensures data isolation by filtering by dealer ID.
+     * 
+     * @param dealerId - The ID of the dealer.
+     * @returns A promise that resolves to an array of the dealer's appointments.
      */
-    async findByDealerId(dealerId: number): Promise<Appointment[]> {
-        const pool = await getNewConnection();
+    async findByDealerId(dealerId: number | string): Promise<Appointment[]> {
         try {
-            const result = await pool.request()
-                .input('dealerId', sql.BigInt, dealerId)
-                .query(`
-                    SELECT 
-                        id, dealer_id as dealerId, customer_name as customerName,
-                        appointment_date as appointmentDate, type, status, notes,
-                        created_at as createdAt, updated_at as updatedAt
-                    FROM appointments 
-                    WHERE dealer_id = @dealerId
-                    ORDER BY appointment_date DESC
-                `);
-            return result.recordset as Appointment[];
+            if (!firestore) throw new Error("Firebase not initialized");
+
+            const snapshot = await firestore.collection('appointments')
+                .where('dealerId', '==', dealerId)
+                .orderBy('appointmentDate', 'desc')
+                .get();
+
+            return snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    appointmentDate: (data.appointmentDate as any).toDate(),
+                    createdAt: (data.createdAt as any).toDate(),
+                    updatedAt: (data.updatedAt as any).toDate()
+                } as unknown as Appointment;
+            });
         } catch (error) {
-            console.error('[SQL Error] Failed to fetch dealer appointments:', error);
+            console.error('[Firebase Error] Failed to fetch dealer appointments:', error);
             return [];
-        } finally {
-            pool.close();
         }
     },
 
     /**
-     * Find a single appointment by ID.
+     * Retrieves a single appointment by its ID.
+     * 
+     * @param id - The unique identifier of the appointment.
+     * @returns A promise that resolves to the appointment if found, or undefined.
      */
-    async findById(id: number): Promise<Appointment | undefined> {
-        const pool = await getNewConnection();
+    async findById(id: number | string): Promise<Appointment | undefined> {
         try {
-            const result = await pool.request()
-                .input('id', sql.BigInt, id)
-                .query(`
-                    SELECT 
-                        id, dealer_id as dealerId, customer_name as customerName,
-                        appointment_date as appointmentDate, type, status, notes,
-                        created_at as createdAt, updated_at as updatedAt
-                    FROM appointments 
-                    WHERE id = @id
-                `);
-            return result.recordset[0] as Appointment | undefined;
+            if (!firestore) throw new Error("Firebase not initialized");
+
+            const doc = await firestore.collection('appointments').doc(String(id)).get();
+
+            if (!doc.exists) return undefined;
+
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                appointmentDate: (data?.appointmentDate as any).toDate(),
+                createdAt: (data?.createdAt as any).toDate(),
+                updatedAt: (data?.updatedAt as any).toDate()
+            } as unknown as Appointment;
         } catch (error) {
-            console.error('[SQL Error] Appointment not found:', error);
             return undefined;
-        } finally {
-            pool.close();
         }
     },
 
     /**
-     * Create a new appointment.
+     * Creates a new appointment.
+     * 
+     * @param data - The data transfer object containing appointment details.
+     * @returns A promise that resolves to the newly created appointment.
      */
     async create(data: CreateAppointmentDTO): Promise<Appointment> {
-        const pool = await getNewConnection();
         try {
-            const result = await pool.request()
-                .input('dealerId', sql.BigInt, data.dealerId)
-                .input('customerName', sql.NVarChar, data.customerName)
-                .input('appointmentDate', sql.DateTimeOffset, new Date(data.appointmentDate))
-                .input('type', sql.NVarChar, data.type)
-                .input('status', sql.NVarChar, 'Scheduled')
-                .input('notes', sql.NVarChar, data.notes || null)
-                .query(`
-                    INSERT INTO appointments (dealer_id, customer_name, appointment_date, type, status, notes, created_at, updated_at)
-                    OUTPUT INSERTED.id, INSERTED.created_at as createdAt, INSERTED.updated_at as updatedAt
-                    VALUES (@dealerId, @customerName, @appointmentDate, @type, @status, @notes, GETDATE(), GETDATE())
-                `);
+            if (!firestore) throw new Error("Firebase not initialized");
 
-            const inserted = result.recordset[0];
-            
-            return {
-                id: inserted.id,
+            const newAppointment = {
                 ...data,
-                appointmentDate: new Date(data.appointmentDate),
+                appointmentDate: new Date(data.appointmentDate), // Ensure Date object for Firestore Timestamp
                 status: 'Scheduled',
-                createdAt: inserted.createdAt,
-                updatedAt: inserted.updatedAt
-            } as Appointment;
-        } catch (error) {
-            console.error('[SQL Error] Failed to create appointment:', error);
-            throw error;
-        } finally {
-            pool.close();
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            const docRef = await firestore.collection('appointments').add(newAppointment);
+
+            return { id: docRef.id, ...newAppointment } as unknown as Appointment;
+        } catch (e) {
+            console.error('[Firebase Error] Failed to create appointment:', e);
+            throw e;
         }
     },
 
     /**
-     * Update appointment status.
+     * Updates the status of an appointment.
+     * 
+     * @param id - The ID of the appointment to update.
+     * @param status - The new status.
+     * @returns A promise that resolves when the update is complete.
      */
-    async updateStatus(id: number, status: string): Promise<void> {
-        const pool = await getNewConnection();
+    async updateStatus(id: number | string, status: string): Promise<void> {
         try {
-            await pool.request()
-                .input('id', sql.BigInt, id)
-                .input('status', sql.NVarChar, status)
-                .query(`
-                    UPDATE appointments 
-                    SET status = @status, updated_at = GETDATE()
-                    WHERE id = @id
-                `);
+            if (!firestore) throw new Error("Firebase not initialized");
+
+            await firestore.collection('appointments').doc(String(id)).update({
+                status: status,
+                updatedAt: new Date()
+            });
         } catch (error) {
-            console.error('[SQL Error] Failed to update status:', error);
+            console.error('[Firebase Error] Failed to update status:', error);
             throw error;
-        } finally {
-            pool.close();
         }
     }
 };

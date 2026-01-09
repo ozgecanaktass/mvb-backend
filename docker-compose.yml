@@ -1,67 +1,21 @@
-version: '3.8'
-
 services:
+  # Sadece bizim API uygulamamız çalışacak
   api:
     build: .
     container_name: glasses-backend
     ports:
       - "3000:3000"
+    # .env dosyasındaki ayarları (Firebase/GA4 anahtarları) içeri aktar
+    env_file:
+      - ./.env
     environment:
       - PORT=3000
       - NODE_ENV=development
-
-      - DB_SERVER=sqlserver-test
-      - DB_USER=sa
-      - DB_PASS=TestPassword123@
-      - DB_NAME=EyewearDB
-
-      - COSMOS_ENDPOINT=https://cosmosdb-emulator:8081
-      - COSMOS_KEY=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
-      - NODE_TLS_REJECT_UNAUTHORIZED=0 
     volumes:
+      # Kod değişikliklerini anlık yansıtmak için
       - .:/app
       - /app/node_modules
     command: npm run dev
-    depends_on:
-      - sqlserver-test
-      - cosmosdb-emulator
-    networks:
-      - eyewear-net
-
-  # --- 2. Local SQL Server ---
-  sqlserver-test:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver-test
-    user: root 
-    environment:
-      ACCEPT_EULA: "Y"
-      SA_PASSWORD: "TestPassword123@"
-      MSSQL_PID: "Express" 
-    ports:
-      - "1433:1433"
-    mem_limit: 3g 
-    networks:
-      - eyewear-net
-
-  # --- 3. Local Cosmos DB Emulator ---
-  cosmosdb-emulator:
-    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator
-    container_name: cosmosdb-emulator
-    mem_limit: 3g
-    cpu_count: 2
-    environment:
-      AZURE_COSMOS_EMULATOR_PARTITION_COUNT: "2"
-      AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: "false"
-      AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE: "127.0.0.1"
-    ports:
-      - "8081:8081"
-      - "10250-10255:10250-10255"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -k https://localhost:8081/_explorer/emulator.pem || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 40s
     networks:
       - eyewear-net
 

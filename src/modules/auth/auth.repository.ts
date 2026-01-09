@@ -1,122 +1,143 @@
-import sql from 'mssql';
-import { getNewConnection } from '../../shared/database/azureSql'; // Use pool-less connection
+import { auth, firestore } from '../../config/firebase';
 import { User } from '../../shared/models/User';
 
 export const authRepository = {
-    // Find user by email
+
+    /**
+     * Finds a user by their email address.
+     * Combines data from Firebase Auth (core info) and Firestore (role, dealerId).
+     * 
+     * @param email - The email address to search for.
+     * @returns A promise that resolves to the User object if found, or undefined.
+     */
     async findByEmail(email: string): Promise<User | undefined> {
-        const pool = await getNewConnection();
         try {
-            const result = await pool.request()
-                .input('email', sql.NVarChar, email)
-                .query(`
-                    SELECT 
-                        id, 
-                        email, 
-                        password_hash as passwordHash, 
-                        name, 
-                        role, 
-                        dealer_id as dealerId, 
-                        dealer_limit as dealerLimit, 
-                        is_active as isActive, 
-                        created_at as createdAt, 
-                        updated_at as updatedAt
-                    FROM users 
-                    WHERE email = @email
-                `);
-            
-            // Log the result for debugging 
-            // console.log('🔍 [Repo] SQL Result:', result.recordset[0]);
+            if (!auth || !firestore) throw new Error("Firebase not initialized");
 
-            return result.recordset[0] as User | undefined;
+            // 1. Find user in Firebase Auth
+            const firebaseUser = await auth.getUserByEmail(email);
+
+            // 2. Fetch extra details from Firestore
+            const userDoc = await firestore.collection('users').doc(firebaseUser.uid).get();
+            const userData = userDoc.exists ? userDoc.data() : {};
+
+            return {
+                id: firebaseUser.uid,
+                email: firebaseUser.email!,
+                role: userData?.role || 'dealer_user',
+                dealerId: userData?.dealerId || null,
+                dealerLimit: userData?.dealerLimit || 10,
+                passwordHash: 'FIREBASE_MANAGED', // Password management is handled by Firebase
+                isActive: !firebaseUser.disabled,
+                createdAt: new Date(firebaseUser.metadata.creationTime),
+                updatedAt: new Date(firebaseUser.metadata.lastSignInTime),
+                name: firebaseUser.displayName || userData?.name || ''
+            } as User;
+
         } catch (error) {
-            console.error('[SQL Error] User not found:', error);
             return undefined;
-        } finally {
-            pool.close(); 
         }
     },
 
-    // find user by ID for verifyşng user before password change
-    async findById(id: number): Promise<User | undefined> {
-        const pool = await getNewConnection();
+    /**
+     * Finds a user by their unique ID.
+     * 
+     * @param id - The unique identifier of the user.
+     * @returns A promise that resolves to the User object if found, or undefined.
+     */
+    async findById(id: number | string): Promise<User | undefined> {
         try {
-            const result = await pool.request()
-                .input('id', sql.BigInt, id)
-                .query(`
-                    SELECT 
-                        id, 
-                        email, 
-                        password_hash as passwordHash, 
-                        name, 
-                        role, 
-                        dealer_id as dealerId, 
-                        dealer_limit as dealerLimit, 
-                        is_active as isActive, 
-                        created_at as createdAt, 
-                        updated_at as updatedAt
-                    FROM users 
-                    WHERE id = @id
-                `);
-            
-            return result.recordset[0] as User | undefined;
+            if (!auth || !firestore) throw new Error("Firebase not initialized");
+
+            const uid = String(id);
+            const userDoc = await firestore.collection('users').doc(uid).get();
+
+            if (!userDoc.exists) return undefined;
+            const userData = userDoc.data();
+
+            // While we could fetch from Auth for fresh status, Firestore data is primarily used here.
+            // Getting the user from Auth ensures we have the correct email and status.
+            const firebaseUser = await auth.getUser(uid);
+
+            return {
+                id: uid,
+                email: firebaseUser.email!,
+                role: userData?.role,
+                dealerId: userData?.dealerId,
+                dealerLimit: userData?.dealerLimit,
+                passwordHash: 'FIREBASE_MANAGED',
+                isActive: !firebaseUser.disabled,
+                createdAt: new Date(firebaseUser.metadata.creationTime),
+                updatedAt: new Date(firebaseUser.metadata.lastSignInTime),
+                name: firebaseUser.displayName || userData?.name || ''
+            } as User;
         } catch (error) {
-            console.error('[SQL Error] User not found by ID:', error);
             return undefined;
-        } finally {
-            pool.close();
         }
     },
 
-    // Create new user in the database 
+    /**
+     * Creates a new user in both Firebase Auth and Firestore.
+     * 
+     * @param user - The user object containing registration details.
+     * @returns A promise that resolves to the newly created User with its ID.
+     */
     async create(user: User): Promise<User> {
-        const pool = await getNewConnection();
         try {
-            const result = await pool.request()
-                .input('email', sql.NVarChar, user.email)
-                .input('passwordHash', sql.NVarChar, user.passwordHash)
-                .input('name', sql.NVarChar, user.name)
-                .input('role', sql.NVarChar, user.role)
-                // new: handle nullable dealerId
-                .input('dealerId', sql.BigInt, user.dealerId || null)
-                // use default 10 if dealerLimit is not provided (only relevant for producers)
-                .input('dealerLimit', sql.Int, user.dealerLimit || 10) 
-                .input('isActive', sql.Bit, user.isActive ? 1 : 0)
-                .query(`
-                    INSERT INTO users (email, password_hash, name, role, dealer_id, dealer_limit, is_active, created_at, updated_at)
-                    OUTPUT INSERTED.id
-                    VALUES (@email, @passwordHash, @name, @role, @dealerId, @dealerLimit, @isActive, GETDATE(), GETDATE())
-                `);
+            if (!auth || !firestore) throw new Error("Firebase not initialized");
 
-            const newId = result.recordset[0].id;
-            
-            return { ...user, id: newId };
-        } catch (error) {
-            console.error('[SQL Error] Failed to create user:', error);
-            throw error;
-        } finally {
-            pool.close();
+            // 1. Create user in Firebase Auth
+            // Note: 'user.passwordHash' from service layer is the raw password here.
+            const newUser = await auth.createUser({
+                email: user.email,
+                password: user.passwordHash, // Passing raw password to Firebase
+                displayName: user.name,
+                disabled: !user.isActive
+            });
+
+            // 2. Save details to Firestore
+            // We do NOT store the password here.
+            await firestore.collection('users').doc(newUser.uid).set({
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                dealerId: user.dealerId || null,
+                dealerLimit: user.dealerLimit || 10,
+                passwordHash: 'FIREBASE_MANAGED', // Critical: Do not store actual password
+                isActive: user.isActive,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+
+            await auth.setCustomUserClaims(newUser.uid, {
+                role: user.role,
+                dealerId: user.dealerId
+            });
+
+            return { ...user, id: newUser.uid };
+        } catch (e) {
+            console.error('[Firebase Error] Failed to create user:', e);
+            throw e;
         }
     },
 
-    // update user password
-    // updates the password hash and updated_at timestamp 
-    async updatePassword(userId: number, newPasswordHash: string): Promise<void> {
-        const pool = await getNewConnection();
+    /**
+     * Updates a user's password in Firebase Auth.
+     * 
+     * @param userId - The ID of the user.
+     * @param newPasswordHash - The new raw password (not actually a hash) to set.
+     * @returns A promise that resolves when the update is complete.
+     */
+    async updatePassword(userId: number | string, newPasswordHash: string): Promise<void> {
         try {
-            await pool.request()
-                .input('id', sql.BigInt, userId)
-                .input('passwordHash', sql.NVarChar, newPasswordHash)
-                .query(`
-                    UPDATE users 
-                    SET password_hash = @passwordHash, updated_at = GETDATE()
-                    WHERE id = @id
-                `);
+            if (!auth) throw new Error("Firebase not initialized");
+
+            await auth.updateUser(String(userId), {
+                password: newPasswordHash
+            });
         } catch (error) {
-            console.error('[SQL Error] Password update failed:', error);
+            console.error('[Firebase Error] Password update failed:', error);
             throw error;
-        } finally {
-            pool.close();
         }
     }
 };

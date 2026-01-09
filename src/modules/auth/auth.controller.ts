@@ -7,7 +7,14 @@ export interface AuthInputDTO {
     password: string;
 }
 
-// POST /api/v1/auth/login
+/**
+ * Handles user login.
+ * Authenticates the user with email and password, returning a JWT token and user details.
+ * 
+ * @param req - The express request object containing email and password in the body.
+ * @param res - The express response object.
+ * @returns A JSON response with the authentication token and user info.
+ */
 export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body as AuthInputDTO;
 
@@ -27,7 +34,14 @@ export const login = async (req: Request, res: Response) => {
     });
 };
 
-// POST /api/v1/auth/logout
+/**
+ * Handles user logout.
+ * Currently a stateless operation on the server (client handles token removal).
+ * 
+ * @param req - The express request object.
+ * @param res - The express response object.
+ * @returns A JSON response confirming logout.
+ */
 export const logout = (req: Request, res: Response) => {
     res.status(200).json({
         success: true,
@@ -35,7 +49,17 @@ export const logout = (req: Request, res: Response) => {
     });
 };
 
-// POST /api/v1/auth/users
+/**
+ * Creates a new user.
+ * 
+ * Capability checks:
+ * - 'producer_admin' can create any user and assign them to dealers.
+ * - 'dealer_admin' can only create 'dealer_user' roles for their own dealer.
+ * 
+ * @param req - The express request object containing new user details.
+ * @param res - The express response object.
+ * @returns A JSON response with the created user's data.
+ */
 export const createUser = async (req: Request, res: Response) => {
     const { email, password, name, role, dealerId } = req.body;
     const currentUser = req.user!;
@@ -73,7 +97,13 @@ export const createUser = async (req: Request, res: Response) => {
     });
 };
 
-// POST /api/v1/auth/change-password
+/**
+ * Updates the authenticated user's password.
+ * 
+ * @param req - The express request object containing current, new, and confirm passwords.
+ * @param res - The express response object.
+ * @returns A JSON response confirming the password update.
+ */
 export const updatePassword = async (req: Request, res: Response) => {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     const userId = req.user!.id;

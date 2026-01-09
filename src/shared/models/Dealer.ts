@@ -2,7 +2,7 @@
 // represents the dealer entity in the system
 
 export interface Dealer {
-    id: number; // unique identifier
+    id: number | string;  //id can be number or string (firestore UUID)
     name: string; // dealer name
 
     // !!!
