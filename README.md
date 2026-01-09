@@ -54,7 +54,7 @@ Ensure you have the following installed:
 
 ### 2. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone <[repository-url](https://github.com/ozgecanaktass/mvb-backend)>
 cd eyewear-backend
 ```
 
